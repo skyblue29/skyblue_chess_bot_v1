@@ -5,7 +5,6 @@ var $status = $('#status');
 
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
-// 🌟 오프닝 족보 (나이트 뜀박질 방지용 고정 패턴)
 const OPENING_BOOK = {
     "": ["e4", "d4", "c4", "Nf3"],
     "e4": ["e5", "c5", "e6", "c6"],
@@ -22,7 +21,6 @@ const OPENING_BOOK = {
     "e4 c5 Nf3": ["d6", "Nc6", "e6"]
 };
 
-// 🌟 위치별 점수판 (폰이 중앙으로 나갈 때 엄청난 가산점 부여)
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
     [ 10, 10, 10,-40,-40, 10, 10, 10], 
@@ -85,7 +83,7 @@ var KING_TABLE = [
     [-30,-40,-40,-50,-50,-40,-40,-30]
 ];
 
-// 🌟 버그 해결: c++ 무한 루프 오타를 c++로 정상 수정했습니다!
+// 🌟 완벽하게 무한 루프 오타를 수정한 평가 함수
 function evaluateBoard(boardMatrix) {
     var score = 0;
     for (var r = 0; r < 8; r++) {
@@ -114,7 +112,6 @@ function evaluateBoard(boardMatrix) {
 
 function minimax(gameObj, depth, alpha, beta, isMaximizing) {
     if (gameObj.game_over()) {
-        // 🌟 킬각 패치: 체크메이트 점수를 증폭시켜 눈앞의 1수 메이트를 절대 놓치지 않습니다.
         if (gameObj.in_checkmate()) return gameObj.turn() === 'w' ? (-999999 - (depth * 1000)) : (999999 + (depth * 1000));
         if (gameObj.in_draw()) return 0;
     }
@@ -147,7 +144,6 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
 function getBestMove() {
     var historyStr = game.history().join(" ");
     
-    // 1. 오프닝 족보 체크
     if (OPENING_BOOK[historyStr]) {
         var bookMoves = OPENING_BOOK[historyStr];
         var chosenMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
@@ -161,7 +157,6 @@ function getBestMove() {
     var bestMove = null;
     var bestValue = Infinity;
     
-    // 체크메이트(#), 체크(+)를 최우선 순위로 연산 정렬
     moves.sort(function(a, b) {
         if (a.includes('#')) return -1;
         if (b.includes('#')) return 1;
@@ -175,7 +170,6 @@ function getBestMove() {
         game.move(move);
         var boardValue = minimax(game, 2, -Infinity, Infinity, true); 
 
-        // 🌟 나이트 고집 차단 장치: 초반 8수 이내에 중앙 폰(e/d/c) 전진이 가능하면 가산점 폭탄 부여
         if (game.history().length <= 8) {
             if (move === 'e5' || move === 'd5' || move === 'c5' || move === 'e6' || move === 'd6') {
                 boardValue -= 600; 
