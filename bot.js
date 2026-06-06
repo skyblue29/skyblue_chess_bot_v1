@@ -5,7 +5,7 @@ var $status = $('#status');
 
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
-const OPENING_BOOK = {
+var OPENING_BOOK = {
     "": ["e4", "d4", "c4", "Nf3"],
     "e4": ["e5", "c5", "e6", "c6"],
     "d4": ["Nf6", "d5", "e6"],
@@ -31,7 +31,6 @@ var PAWN_TABLE = [
     [ 80, 80, 80, 80, 80, 80, 80, 80], 
     [  0,  0,  0,  0,  0,  0,  0,  0]  
 ];
-
 var KNIGHT_TABLE = [
     [-50,-40,-30,-30,-30,-30,-40,-50],
     [-40,-20,  0,  0,  0,  0,-20,-40],
@@ -83,7 +82,6 @@ var KING_TABLE = [
     [-30,-40,-40,-50,-50,-40,-40,-30]
 ];
 
-// 🌟 완벽하게 무한 루프 오타를 수정한 평가 함수
 function evaluateBoard(boardMatrix) {
     var score = 0;
     for (var r = 0; r < 8; r++) {
@@ -148,7 +146,7 @@ function getBestMove() {
         var bookMoves = OPENING_BOOK[historyStr];
         var chosenMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
         var legalMoves = game.moves();
-        if (legalMoves.includes(chosenMove)) {
+        if (legalMoves.indexOf(chosenMove) !== -1) {
             return chosenMove;
         }
     }
@@ -158,10 +156,10 @@ function getBestMove() {
     var bestValue = Infinity;
     
     moves.sort(function(a, b) {
-        if (a.includes('#')) return -1;
-        if (b.includes('#')) return 1;
-        if (a.includes('+')) return -1;
-        if (b.includes('+')) return 1;
+        if (a.indexOf('#') !== -1) return -1;
+        if (b.indexOf('#') !== -1) return 1;
+        if (a.indexOf('+') !== -1) return -1;
+        if (b.indexOf('+') !== -1) return 1;
         return (b.indexOf('x') !== -1 ? 1 : 0) - (a.indexOf('x') !== -1 ? 1 : 0);
     });
     
@@ -231,10 +229,10 @@ function triggerGameOver(reason) {
     $status.text('Game Over: ' + reason);
 
     if (reason === 'Checkmate') {
-        let winnerText = (game.turn() === 'w') ? "CHECKMATE!<br>Black Wins" : "CHECKMATE!<br>White Wins";
+        var winnerText = (game.turn() === 'w') ? "CHECKMATE!<br>Black Wins" : "CHECKMATE!<br>White Wins";
         $('#checkmate-banner').html(winnerText);
         $('#checkmate-banner').fadeIn(300);
-        setTimeout(() => { showAnalysisModal(reason); }, 2000);
+        setTimeout(function() { showAnalysisModal(reason); }, 2000);
     } else {
         showAnalysisModal(reason);
     }
@@ -249,41 +247,41 @@ function showAnalysisModal(reason) {
 }
 
 async function runAnalysis() {
-    let history = game.history();
-    let tempGame = new Chess();
-    let stats = { book:0, brilliant:0, great:0, best:0, excellent:0, good:0, inaccuracy:0, mistake:0, miss:0, blunder:0 };
+    var history = game.history();
+    var tempGame = new Chess();
+    var stats = { book:0, brilliant:0, great:0, best:0, excellent:0, good:0, inaccuracy:0, mistake:0, miss:0, blunder:0 };
 
-    for (let i = 0; i < history.length; i++) {
-        let isWhite = (i % 2 === 0);
-        let moveStr = history[i];
-        let countThisMove = isWhite; 
+    for (var i = 0; i < history.length; i++) {
+        var isWhite = (i % 2 === 0);
+        var moveStr = history[i];
+        var countThisMove = isWhite; 
 
         if (i < 8) {
             if (countThisMove) stats.book++;
             tempGame.move(moveStr);
         } else {
-            let evalBefore = minimax(tempGame, 2, -Infinity, Infinity, isWhite);
+            var evalBefore = minimax(tempGame, 2, -Infinity, Infinity, isWhite);
             tempGame.move(moveStr);
-            let evalAfter = minimax(tempGame, 2, -Infinity, Infinity, !isWhite);
-            let delta = isWhite ? (evalAfter - evalBefore) : (evalBefore - evalAfter);
-            let prevMoveStr = i > 0 ? history[i-1] : ""; 
+            var evalAfter = minimax(tempGame, 2, -Infinity, Infinity, !isWhite);
+            var delta = isWhite ? (evalAfter - evalBefore) : (evalBefore - evalAfter);
+            var prevMoveStr = i > 0 ? history[i-1] : ""; 
 
             if (countThisMove) {
                 if (delta <= -250) stats.blunder++; 
                 else if (delta <= -100) {
-                    if (prevMoveStr.includes('x') || prevMoveStr.includes('+')) stats.miss++; 
+                    if (prevMoveStr.indexOf('x') !== -1 || prevMoveStr.indexOf('+') !== -1) stats.miss++; 
                     else stats.mistake++; 
                 } else if (delta <= -40) stats.inaccuracy++; 
-                else if (delta > 150 && moveStr.includes('x')) stats.brilliant++; 
+                else if (delta > 150 && moveStr.indexOf('x') !== -1) stats.brilliant++; 
                 else if (delta > 100) stats.great++;
                 else if (delta >= -10) stats.best++;
                 else if (delta >= -30) stats.excellent++;
                 else stats.good++;
             }
         }
-        let percent = Math.round(((i + 1) / history.length) * 100);
+        var percent = Math.round(((i + 1) / history.length) * 100);
         $('#progress-fill').css('width', percent + '%');
-        await new Promise(r => setTimeout(r, 10)); 
+        await new Promise(function(resolve) { setTimeout(resolve, 10); }); 
     }
 
     $('#stat-brilliant').text(stats.brilliant);
@@ -311,9 +309,16 @@ function resetGame() {
     updateStatus();             
 }
 
-var config = {
-    draggable: true, position: 'start',
-    onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd,
-    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-};
-board = Chessboard('myBoard', config);
+// 🌟 안전장치 탑재: 체스판 초기화 과정에서 에러가 나면 화면에 경고창을 띄워줍니다!
+$(document).ready(function() {
+    try {
+        var config = {
+            draggable: true, position: 'start',
+            onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd,
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        };
+        board = Chessboard('myBoard', config);
+    } catch (e) {
+        alert("체스판을 불러오는 데 실패했습니다! 에러 원인: " + e.message);
+    }
+});
