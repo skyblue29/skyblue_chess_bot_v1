@@ -5,22 +5,6 @@ var $status = $('#status');
 
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
-var OPENING_BOOK = {
-    "": ["e4", "d4", "c4", "Nf3"],
-    "e4": ["e5", "c5", "e6", "c6"],
-    "d4": ["Nf6", "d5", "e6"],
-    "c4": ["e5", "c5", "Nf6"],
-    "Nf3": ["Nf6", "d5", "c5"],
-    "e4 e5": ["Nf3", "Nc3", "Bc4"],
-    "e4 c5": ["Nf3", "Nc3", "c3"],
-    "e4 e6": ["d4"],
-    "e4 c6": ["d4"],
-    "d4 d5": ["c4", "Nf3", "Bf4"],
-    "d4 Nf6": ["c4", "Nf3", "Bg5"],
-    "e4 e5 Nf3": ["Nc6", "Nf6", "d6"],
-    "e4 c5 Nf3": ["d6", "Nc6", "e6"]
-};
-
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
     [ 10, 10, 10,-40,-40, 10, 10, 10], 
@@ -145,14 +129,28 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
 }
 
 function getBestMove() {
-    var historyStr = game.history().join(" ");
+    var fullFen = game.fen();
+    // API Specification: Try to match using full FEN or position fallback
+    var positionOnlyFen = fullFen.split(' ')[0];
     
-    if (OPENING_BOOK[historyStr]) {
-        var bookMoves = OPENING_BOOK[historyStr];
-        var chosenMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
-        var legalMoves = game.moves();
-        if (legalMoves.indexOf(chosenMove) !== -1) {
-            return chosenMove;
+    var matchedOpening = ECO_DATA_MASTER[fullFen] || ECO_DATA_MASTER[positionOnlyFen];
+    
+    if (matchedOpening && matchedOpening.moves) {
+        var theoryMoves = matchedOpening.moves.split(' ');
+        var playedHistory = game.history();
+        var nextTheoryMoveIdx = playedHistory.length;
+        
+        if (nextTheoryMoveIdx < theoryMoves.length) {
+            var nextMoveCandidate = theoryMoves[nextTheoryMoveIdx];
+            // Remove move numbers if any (e.g. "1.e4" -> "e4")
+            if (nextMoveCandidate.indexOf('.') !== -1) {
+                nextMoveCandidate = nextMoveCandidate.split('.')[1];
+            }
+            
+            var legalMoves = game.moves();
+            if (legalMoves.indexOf(nextMoveCandidate) !== -1) {
+                return nextMoveCandidate;
+            }
         }
     }
 
