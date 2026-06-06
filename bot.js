@@ -15,7 +15,6 @@ var PAWN_TABLE = [
     [ 5, 10, 10,-20,-20, 10, 10,  5],
     [ 0,  0,  0,  0,  0,  0,  0,  0]
 ];
-
 var KNIGHT_TABLE = [
     [-50,-40,-30,-30,-30,-30,-40,-50],
     [-40,-20,  0,  0,  0,  0,-20,-40],
@@ -26,7 +25,6 @@ var KNIGHT_TABLE = [
     [-40,-20,  0,  5,  5,  0,-20,-40],
     [-50,-40,-30,-30,-30,-30,-40,-50]
 ];
-
 var BISHOP_TABLE = [
     [-20,-10,-10,-10,-10,-10,-10,-20],
     [-10,  0,  0,  0,  0,  0,  0,-10],
@@ -37,7 +35,6 @@ var BISHOP_TABLE = [
     [-10,  5,  0,  0,  0,  0,  5,-10],
     [-20,-10,-10,-10,-10,-10,-10,-20]
 ];
-
 var ROOK_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0],
     [  5, 10, 10, 10, 10, 10, 10,  5],
@@ -48,7 +45,6 @@ var ROOK_TABLE = [
     [ -5,  0,  0,  0,  0,  0,  0, -5],
     [  0,  0,  0,  5,  5,  0,  0,  0]
 ];
-
 var QUEEN_TABLE = [
     [-20,-10,-10, -5, -5,-10,-10,-20],
     [-10,  0,  0,  0,  0,  0,  0,-10],
@@ -59,7 +55,6 @@ var QUEEN_TABLE = [
     [-10,  0,  5,  0,  0,  0,  0,-10],
     [-20,-10,-10, -5, -5,-10,-10,-20]
 ];
-
 var KING_TABLE = [
     [-30,-40,-40,-50,-50,-40,-40,-30],
     [-30,-40,-40,-50,-50,-40,-40,-30],
@@ -175,25 +170,86 @@ function updateStatus() {
     }
     $history.text(historyStr || "Game Start");
     $status.text('skyblue bot v1');
-    if (game.in_checkmate()) $status.text('Game Over: Checkmate!');
-    else if (game.in_draw()) $status.text('Game Over: Draw');
+
+    if (game.in_checkmate()) triggerGameOver('Checkmate');
+    else if (game.in_draw()) triggerGameOver('Draw');
 }
 
-// 🌟 게임을 처음부터 다시 시작하게 만들어 주는 리셋 함수 추가
+function triggerGameOver(reason) {
+    if (game.history().length < 2) {
+        alert("The game is too short to analyze.");
+        resetGame();
+        return;
+    }
+    $status.text('Game Over: ' + reason);
+    $('#modal-title').text('Analyzing Game... (' + reason + ')');
+    $('#stats-container').hide();
+    $('#progress-bar').show();
+    $('#analysis-modal').css('display', 'flex');
+    runAnalysis(); 
+}
+
+async function runAnalysis() {
+    let history = game.history();
+    let tempGame = new Chess();
+    let stats = { book:0, brilliant:0, great:0, best:0, excellent:0, good:0, inaccuracy:0, mistake:0, miss:0, blunder:0 };
+
+    for (let i = 0; i < history.length; i++) {
+        let isWhite = (i % 2 === 0);
+        let moveStr = history[i];
+
+        if (i < 6) {
+            stats.book++;
+            tempGame.move(moveStr);
+        } else {
+            let evalBefore = evaluateBoard(tempGame.board());
+            tempGame.move(moveStr);
+            let evalAfter = evaluateBoard(tempGame.board());
+            let delta = isWhite ? (evalAfter - evalBefore) : (evalBefore - evalAfter);
+
+            if (delta > 80 && moveStr.includes('x')) stats.brilliant++; 
+            else if (delta > 40) stats.great++;
+            else if (delta >= -10) stats.best++;
+            else if (delta >= -30) stats.excellent++;
+            else if (delta >= -60) stats.good++;
+            else if (delta >= -120) stats.inaccuracy++; 
+            else if (delta >= -250) stats.mistake++;
+            else if (delta >= -400 && history[i-1] && history[i-1].includes('x')) stats.miss++; 
+            else stats.blunder++; 
+        }
+
+        let percent = Math.round(((i + 1) / history.length) * 100);
+        $('#progress-fill').css('width', percent + '%');
+        await new Promise(r => setTimeout(r, 20));
+    }
+
+    $('#stat-brilliant').text(stats.brilliant);
+    $('#stat-great').text(stats.great);
+    $('#stat-best').text(stats.best);
+    $('#stat-excellent').text(stats.excellent);
+    $('#stat-good').text(stats.good);
+    $('#stat-book').text(stats.book);
+    $('#stat-inaccuracy').text(stats.inaccuracy);
+    $('#stat-mistake').text(stats.mistake);
+    $('#stat-miss').text(stats.miss);
+    $('#stat-blunder').text(stats.blunder);
+
+    $('#modal-title').text('Analysis Complete!');
+    $('#progress-bar').hide();
+    $('#stats-container').fadeIn();
+}
+
 function resetGame() {
-    game.clear();               // 가상 체스 보드 데이터 싹 비우기
-    game.reset();               // 기물들을 오프닝 시작 상태로 재배치
-    board.start();              // 화면 그래픽 체스 보드도 시작 위치로 초기화
-    updateStatus();             // 상단 바 기보 내역 및 봇 텍스트 초기화
-    alert("게임을 기권했습니다. 새로운 판을 시작합니다!");
+    $('#analysis-modal').fadeOut();
+    game.clear();               
+    game.reset();               
+    board.start();              
+    updateStatus();             
 }
 
 var config = {
-    draggable: true,
-    position: 'start',
-    onDragStart: onDragStart,
-    onDrop: onDrop,
-    onSnapEnd: onSnapEnd,
+    draggable: true, position: 'start',
+    onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd,
     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
 };
 board = Chessboard('myBoard', config);
