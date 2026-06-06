@@ -3,11 +3,7 @@ var game = new Chess();
 var $history = $('#history');
 var $status = $('#status');
 
-// 1. 기본 기물 가치 (파이썬 기본 엔진 기준)
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
-
-// 2. 미드게임 전용 기물 배치 점수판 (Piece-Square Tables)
-// 흑색 컴퓨터 시점 기준 (위가 백색 진영, 아래가 흑색 진영)
 
 var PAWN_TABLE = [
     [ 0,  0,  0,  0,  0,  0,  0,  0],
@@ -75,7 +71,6 @@ var KING_TABLE = [
     [ 20, 30, 10,  0,  0, 10, 30, 20]
 ];
 
-// 3. 기물 가치 + 위치 보너스 합산 함수
 function evaluateBoard(boardMatrix) {
     var score = 0;
     for (var r = 0; r < 8; r++) {
@@ -84,8 +79,6 @@ function evaluateBoard(boardMatrix) {
             if (piece) {
                 var val = PIECE_VALUES[piece.type];
                 var bonus = 0;
-
-                // 백색과 흑색의 테이블 인덱스 반전 계산
                 var tableRow = (piece.color === 'w') ? (7 - r) : r;
                 var tableCol = c;
 
@@ -96,23 +89,16 @@ function evaluateBoard(boardMatrix) {
                 else if (piece.type === 'q') bonus = QUEEN_TABLE[tableRow][tableCol];
                 else if (piece.type === 'k') bonus = KING_TABLE[tableRow][tableCol];
 
-                if (piece.color === 'w') {
-                    score += (val + bonus);
-                } else {
-                    score -= (val + bonus);
-                }
+                if (piece.color === 'w') score += (val + bonus);
+                else score -= (val + bonus);
             }
         }
     }
     return score;
 }
 
-// 4. 알파-베타 미니맥스 알고리즘
 function minimax(depth, alpha, beta, isMaximizing) {
-    if (depth === 0 || game.game_over()) {
-        return evaluateBoard(game.board());
-    }
-
+    if (depth === 0 || game.game_over()) return evaluateBoard(game.board());
     var moves = game.moves();
     if (isMaximizing) {
         var maxEval = -Infinity;
@@ -137,23 +123,18 @@ function minimax(depth, alpha, beta, isMaximizing) {
     }
 }
 
-// 5. 엔진 탐색 및 결정 함수 (기물 캐슬링 및 미드게임 전략 반영)
 function getBestMove() {
     var moves = game.moves();
     var bestMove = null;
-    var bestValue = Infinity; // 흑색(컴퓨터)은 점수를 깎아 내리는 최선수를 탐색
-
-    // 정렬을 통해 알파-베타 성능 최적화 (캡처나 공격적인 수를 먼저 연산하도록 유도)
+    var bestValue = Infinity;
     moves.sort(function(a, b) {
         return (b.indexOf('x') !== -1 ? 1 : 0) - (a.indexOf('x') !== -1 ? 1 : 0);
     });
-
     for (var i = 0; i < moves.length; i++) {
         var move = moves[i];
         game.move(move);
-        var boardValue = minimax(2, -Infinity, Infinity, true); // Depth 3 (현재수 + 2수 앞)
+        var boardValue = minimax(2, -Infinity, Infinity, true);
         game.undo();
-
         if (boardValue < bestValue) {
             bestValue = boardValue;
             bestMove = move;
@@ -177,42 +158,34 @@ function makeComputerMove() {
 }
 
 function onDrop(source, target) {
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-    });
-
+    var move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) return 'snapback';
-
     updateStatus();
-    if (!game.game_over()) {
-        makeComputerMove();
-    }
+    if (!game.game_over()) makeComputerMove();
 }
 
-function onSnapEnd() {
-    board.position(game.fen());
-}
+function onSnapEnd() { board.position(game.fen()); }
 
 function updateStatus() {
     var moves = game.history();
     var historyStr = "";
     for (var i = 0; i < moves.length; i++) {
-        if (i % 2 === 0) {
-            historyStr += (Math.floor(i / 2) + 1) + ". " + moves[i] + " ";
-        } else {
-            historyStr += moves[i] + " ";
-        }
+        if (i % 2 === 0) historyStr += (Math.floor(i / 2) + 1) + ". " + moves[i] + " ";
+        else historyStr += moves[i] + " ";
     }
     $history.text(historyStr || "Game Start");
     $status.text('skyblue bot v1');
+    if (game.in_checkmate()) $status.text('Game Over: Checkmate!');
+    else if (game.in_draw()) $status.text('Game Over: Draw');
+}
 
-    if (game.in_checkmate()) {
-        $status.text('Game Over: Checkmate!');
-    } else if (game.in_draw()) {
-        $status.text('Game Over: Draw');
-    }
+// 🌟 게임을 처음부터 다시 시작하게 만들어 주는 리셋 함수 추가
+function resetGame() {
+    game.clear();               // 가상 체스 보드 데이터 싹 비우기
+    game.reset();               // 기물들을 오프닝 시작 상태로 재배치
+    board.start();              // 화면 그래픽 체스 보드도 시작 위치로 초기화
+    updateStatus();             // 상단 바 기보 내역 및 봇 텍스트 초기화
+    alert("게임을 기권했습니다. 새로운 판을 시작합니다!");
 }
 
 var config = {
