@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>skyblue bot v1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: 'Malgun Gothic', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #top-bar {
+            width: 400px;
+            background-color: #232323;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 5px 5px 0 0;
+            box-sizing: border-box;
+            border-bottom: 2px solid #444;
+        }
+        #myBoard {
+            width: 400px;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 18px;
+            color: #skyblue;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">Game History: <span id="history">Game Start</span></div>
+    <div id="myBoard"></div>
+    <div id="status">skyblue bot v1</div>
+
+    <script src="bot.js"></script>
+
+</body>
+</html>
