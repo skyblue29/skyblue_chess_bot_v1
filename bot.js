@@ -3,19 +3,17 @@ var game = new Chess();
 var $history = $('#history');
 var $status = $('#status');
 
-// 1. 기물 가치
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
-// 2. 미드게임 위치 점수판 (PST)
 var PAWN_TABLE = [
-    [ 0,  0,  0,  0,  0,  0,  0,  0],
-    [50, 50, 50, 50, 50, 50, 50, 50],
-    [10, 10, 20, 30, 30, 20, 10, 10],
-    [ 5,  5, 10, 25, 25, 10,  5,  5],
+    [ 0,  0,  0,  0,  0,  0,  0,  0], 
+    [ 0,  0,  0,  0,  0,  0,  0,  0], 
+    [ 5, 10, 15, 25, 25, 15, 10,  5], 
+    [ 5,  5, 10, 25, 25, 10,  5,  5], 
     [ 0,  0,  0, 20, 20,  0,  0,  0],
-    [ 5, -5,-10,  0,  0,-10, -5,  5],
-    [ 5, 10, 10,-20,-20, 10, 10,  5],
-    [ 0,  0,  0,  0,  0,  0,  0,  0]
+    [ 5,  5, 10, 20, 20, 10,  5,  5],
+    [10, 10, 20, 30, 30, 20, 10, 10], 
+    [ 0,  0,  0,  0,  0,  0,  0,  0]  
 ];
 var KNIGHT_TABLE = [
     [-50,-40,-30,-30,-30,-30,-40,-50],
@@ -68,7 +66,6 @@ var KING_TABLE = [
     [ 20, 30, 10,  0,  0, 10, 30, 20]
 ];
 
-// 3. 엔진 핵심 평가 함수
 function evaluateBoard(boardMatrix) {
     var score = 0;
     for (var r = 0; r < 8; r++) {
@@ -95,16 +92,22 @@ function evaluateBoard(boardMatrix) {
     return score;
 }
 
-// 4. 미니맥스 + 알파베타 알고리즘
-function minimax(depth, alpha, beta, isMaximizing) {
-    if (depth === 0 || game.game_over()) return evaluateBoard(game.board());
-    var moves = game.moves();
+function minimax(gameObj, depth, alpha, beta, isMaximizing) {
+    if (depth === 0 || gameObj.game_over()) {
+        if (gameObj.in_checkmate()) {
+            return gameObj.turn() === 'w' ? -999999 : 999999;
+        }
+        if (gameObj.in_draw()) return 0;
+        return evaluateBoard(gameObj.board());
+    }
+
+    var moves = gameObj.moves();
     if (isMaximizing) {
         var maxEval = -Infinity;
         for (var i = 0; i < moves.length; i++) {
-            game.move(moves[i]);
-            maxEval = Math.max(maxEval, minimax(depth - 1, alpha, beta, false));
-            game.undo();
+            gameObj.move(moves[i]);
+            maxEval = Math.max(maxEval, minimax(gameObj, depth - 1, alpha, beta, false));
+            gameObj.undo();
             alpha = Math.max(alpha, maxEval);
             if (beta <= alpha) break;
         }
@@ -112,9 +115,9 @@ function minimax(depth, alpha, beta, isMaximizing) {
     } else {
         var minEval = Infinity;
         for (var i = 0; i < moves.length; i++) {
-            game.move(moves[i]);
-            minEval = Math.min(minEval, minimax(depth - 1, alpha, beta, true));
-            game.undo();
+            gameObj.move(moves[i]);
+            minEval = Math.min(minEval, minimax(gameObj, depth - 1, alpha, beta, true));
+            gameObj.undo();
             beta = Math.min(beta, minEval);
             if (beta <= alpha) break;
         }
@@ -122,13 +125,11 @@ function minimax(depth, alpha, beta, isMaximizing) {
     }
 }
 
-// 5. 봇 턴 계산 (가지치기 최적화)
 function getBestMove() {
     var moves = game.moves();
     var bestMove = null;
     var bestValue = Infinity;
     
-    // 공격적인 수를 먼저 계산하도록 정렬
     moves.sort(function(a, b) {
         return (b.indexOf('x') !== -1 ? 1 : 0) - (a.indexOf('x') !== -1 ? 1 : 0);
     });
@@ -136,7 +137,7 @@ function getBestMove() {
     for (var i = 0; i < moves.length; i++) {
         var move = moves[i];
         game.move(move);
-        var boardValue = minimax(2, -Infinity, Infinity, true); // 탐색 깊이(Depth 3)
+        var boardValue = minimax(game, 2, -Infinity, Infinity, true); 
         game.undo();
         if (boardValue < bestValue) {
             bestValue = boardValue;
@@ -146,7 +147,6 @@ function getBestMove() {
     return bestMove || moves[Math.floor(Math.random() * moves.length)];
 }
 
-// 6. UI 이벤트 및 체스 룰 처리
 function onDragStart(source, piece, position, orientation) {
     if (game.game_over() || piece.search(/^b/) !== -1) return false;
 }
@@ -184,7 +184,7 @@ function updateStatus() {
     else if (game.in_draw()) triggerGameOver('Draw');
 }
 
-// 7. 대국 종료 및 기권 버튼 처리
+// 🌟 체크메이트 결과 세분화 (White Wins / Black Wins)
 function triggerGameOver(reason) {
     if (game.history().length < 2) {
         alert("The game is too short to analyze.");
@@ -192,6 +192,24 @@ function triggerGameOver(reason) {
         return;
     }
     $status.text('Game Over: ' + reason);
+
+    if (reason === 'Checkmate') {
+        // 체크메이트 당한 쪽의 턴을 검사해서 승리자 판정
+        // game.turn()이 'w'라는 건 백색 차례에 체크메이트를 당했다는 뜻이므로 흑(Black)의 승리!
+        let winnerText = (game.turn() === 'w') ? "CHECKMATE!<br>Black Wins" : "CHECKMATE!<br>White Wins";
+        
+        $('#checkmate-banner').html(winnerText); // 배너에 승리 텍스트 입력
+        $('#checkmate-banner').fadeIn(300);
+        
+        setTimeout(() => {
+            showAnalysisModal(reason);
+        }, 2000); // 연출을 감상할 수 있게 2초 뒤 모달창 오픈
+    } else {
+        showAnalysisModal(reason);
+    }
+}
+
+function showAnalysisModal(reason) {
     $('#modal-title').text('Analyzing Game... (' + reason + ')');
     $('#stats-container').hide();
     $('#progress-bar').show();
@@ -199,7 +217,6 @@ function triggerGameOver(reason) {
     runAnalysis(); 
 }
 
-// 8. 🌟 체스닷컴 기준 적용 심화 분석 알고리즘
 async function runAnalysis() {
     let history = game.history();
     let tempGame = new Chess();
@@ -208,51 +225,46 @@ async function runAnalysis() {
     for (let i = 0; i < history.length; i++) {
         let isWhite = (i % 2 === 0);
         let moveStr = history[i];
+        let countThisMove = isWhite; 
 
-        // 오프닝 이론 판정 (처음 8수)
         if (i < 8) {
-            stats.book++;
+            if (countThisMove) stats.book++;
             tempGame.move(moveStr);
         } else {
-            let evalBefore = evaluateBoard(tempGame.board());
+            let evalBefore = minimax(tempGame, 2, -Infinity, Infinity, isWhite);
             tempGame.move(moveStr);
-            let evalAfter = evaluateBoard(tempGame.board());
+            let evalAfter = minimax(tempGame, 2, -Infinity, Infinity, !isWhite);
             
-            // 점수 변동폭 계산
             let delta = isWhite ? (evalAfter - evalBefore) : (evalBefore - evalAfter);
             let prevMoveStr = i > 0 ? history[i-1] : ""; 
 
-            // 엄격한 분류 기준 적용
-            if (delta <= -300) {
-                stats.blunder++; 
-            } else if (delta <= -150) {
-                if (prevMoveStr.includes('x') || prevMoveStr.includes('+')) {
-                    stats.miss++;
+            if (countThisMove) {
+                if (delta <= -250) {
+                    stats.blunder++; 
+                } else if (delta <= -100) {
+                    if (prevMoveStr.includes('x') || prevMoveStr.includes('+')) stats.miss++; 
+                    else stats.mistake++; 
+                } else if (delta <= -40) {
+                    stats.inaccuracy++; 
+                } else if (delta > 150 && moveStr.includes('x')) {
+                    stats.brilliant++; 
+                } else if (delta > 100) {
+                    stats.great++;
+                } else if (delta >= -10) {
+                    stats.best++;
+                } else if (delta >= -30) {
+                    stats.excellent++;
                 } else {
-                    stats.mistake++;
+                    stats.good++;
                 }
-            } else if (delta <= -50) {
-                stats.inaccuracy++;
-            } else if (delta > 80 && moveStr.includes('x')) {
-                stats.brilliant++;
-            } else if (delta > 50) {
-                stats.great++;
-            } else if (delta > 0) {
-                stats.best++;
-            } else if (delta >= -10) {
-                stats.excellent++;
-            } else {
-                stats.good++;
             }
         }
 
-        // 분석 막대그래프 애니메이션
         let percent = Math.round(((i + 1) / history.length) * 100);
         $('#progress-fill').css('width', percent + '%');
-        await new Promise(r => setTimeout(r, 20)); // 브라우저 멈춤 방지
+        await new Promise(r => setTimeout(r, 10)); 
     }
 
-    // 결과 화면 출력
     $('#stat-brilliant').text(stats.brilliant);
     $('#stat-great').text(stats.great);
     $('#stat-best').text(stats.best);
@@ -269,8 +281,8 @@ async function runAnalysis() {
     $('#stats-container').fadeIn();
 }
 
-// 9. 대국 초기화 (새 게임)
 function resetGame() {
+    $('#checkmate-banner').hide(); 
     $('#analysis-modal').fadeOut();
     game.clear();               
     game.reset();               
@@ -278,7 +290,6 @@ function resetGame() {
     updateStatus();             
 }
 
-// 초기 설정
 var config = {
     draggable: true, position: 'start',
     onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd,
