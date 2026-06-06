@@ -31,6 +31,28 @@
             box-sizing: border-box;
             border-bottom: 2px solid #444;
         }
+        #control-panel {
+            width: 400px;
+            background-color: #2a2a2a;
+            padding: 8px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+        }
+        #resign-btn {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #resign-btn:hover {
+            background-color: #c9302c;
+        }
         #myBoard {
             width: 400px;
         }
@@ -44,6 +66,9 @@
 <body>
 
     <div id="top-bar">Game History: <span id="history">Game Start</span></div>
+    <div id="control-panel">
+        <button id="resign-btn" onclick="resetGame()">기권하기 (Resign)</button>
+    </div>
     <div id="myBoard"></div>
     <div id="status">skyblue bot v1</div>
 
