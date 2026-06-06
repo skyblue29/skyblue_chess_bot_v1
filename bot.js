@@ -5,21 +5,55 @@ var $status = $('#status');
 
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
+// 🌟 1. 더 훌륭한 방법: 하드코딩된 거대 오프닝 족보 (인터넷 렉/오류 원천 차단)
+const OPENING_BOOK = {
+    "": ["e4", "d4", "c4", "Nf3"],
+    "e4": ["e5", "c5", "e6", "c6"],
+    "d4": ["Nf6", "d5", "e6"],
+    "c4": ["e5", "c5", "Nf6"],
+    "Nf3": ["Nf6", "d5", "c5"],
+    "e4 e5": ["Nf3", "Nc3", "Bc4"],
+    "e4 c5": ["Nf3", "Nc3", "c3"],
+    "e4 e6": ["d4"],
+    "e4 c6": ["d4"],
+    "d4 d5": ["c4", "Nf3", "Bf4"],
+    "d4 Nf6": ["c4", "Nf3", "Bg5"],
+    "e4 e5 Nf3": ["Nc6", "Nf6", "d6"],
+    "e4 c5 Nf3": ["d6", "Nc6", "e6"],
+    "d4 d5 c4": ["c6", "e6", "dxc4"],
+    "e4 e5 Nf3 Nc6": ["Bc4", "Bb5", "d4"],
+    "e4 e5 Nf3 Nf6": ["Nxe5", "d4", "Nc3"],
+    "e4 e5 Nf3 d6": ["d4", "Bc4"],
+    "e4 e5 Bc4": ["Nf6", "Nc6", "Bc5"],
+    "e4 e5 Nc3": ["Nf6", "Nc6"],
+    "e4 c5 Nf3 d6": ["d4"],
+    "e4 c5 Nf3 Nc6": ["d4", "Bb5"],
+    "e4 c5 Nc3": ["Nc6", "g6"],
+    "d4 d5 c4 e6": ["Nc3", "Nf3"],
+    "d4 d5 c4 c6": ["Nf3", "Nc3"],
+    "d4 Nf6 c4": ["e6", "g6"],
+    "d4 Nf6 Nf3": ["e6", "g6", "d5"],
+    "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"],
+    "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
+    "e4 e5 Nf3 Nc6 d4": ["exd4"]
+};
+
+// 🌟 2. 세계 표준 밸런스 점수판 (중앙 폰 보너스만 특별 강화)
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
-    [  5, 10, 10,-30,-30, 10, 10,  5], 
-    [  5, -5,-10, 10, 10,-10, -5,  5], 
-    [  0,  0,  0, 30, 30,  0,  0,  0], 
-    [  5,  5, 10, 40, 40, 10,  5,  5], 
-    [ 10, 10, 20, 50, 50, 20, 10, 10], 
+    [  5, 10, 10,-20,-20, 10, 10,  5], // 시작 위치 (-20)
+    [  5, -5,-10, 30, 30,-10, -5,  5], 
+    [  0,  0,  0, 40, 40,  0,  0,  0], // 중앙으로 밀면 (+40) -> 60점 폭등! 나이트 전개보다 매력적임
+    [  5,  5, 10, 25, 25, 10,  5,  5], 
+    [ 10, 10, 20, 30, 30, 20, 10, 10], 
     [ 50, 50, 50, 50, 50, 50, 50, 50], 
     [  0,  0,  0,  0,  0,  0,  0,  0]  
 ];
 var KNIGHT_TABLE = [
-    [-50,-40,-30,-30,-30,-30,-40,-50], 
+    [-50,-40,-30,-30,-30,-30,-40,-50],
     [-40,-20,  0,  0,  0,  0,-20,-40],
     [-30,  0, 10, 15, 15, 10,  0,-30],
-    [-30,  5, 15, 20, 20, 15,  5,-30], 
+    [-30,  5, 15, 20, 20, 15,  5,-30],
     [-30,  0, 15, 20, 20, 15,  0,-30],
     [-30,  5, 10, 15, 15, 10,  5,-30],
     [-40,-20,  0,  5,  5,  0,-20,-40],
@@ -28,7 +62,7 @@ var KNIGHT_TABLE = [
 var BISHOP_TABLE = [
     [-20,-10,-10,-10,-10,-10,-10,-20],
     [-10,  0,  0,  0,  0,  0,  0,-10],
-    [-10,  0,  5, 10, 10,  5,  0,-10], 
+    [-10,  0,  5, 10, 10,  5,  0,-10],
     [-10,  5,  5, 10, 10,  5,  5,-10],
     [-10,  0, 10, 10, 10, 10,  0,-10],
     [-10, 10, 10, 10, 10, 10, 10,-10],
@@ -36,14 +70,14 @@ var BISHOP_TABLE = [
     [-20,-10,-10,-10,-10,-10,-10,-20]
 ];
 var ROOK_TABLE = [
-    [  0,  0,  0,  5,  5,  0,  0,  0], 
+    [  0,  0,  0,  5,  5,  0,  0,  0],
+    [ -5,  0,  0,  0,  0,  0,  0, -5],
+    [ -5,  0,  0,  0,  0,  0,  0, -5],
+    [ -5,  0,  0,  0,  0,  0,  0, -5],
+    [ -5,  0,  0,  0,  0,  0,  0, -5],
+    [ -5,  0,  0,  0,  0,  0,  0, -5],
     [  5, 10, 10, 10, 10, 10, 10,  5],
-    [ -5,  0,  0,  0,  0,  0,  0, -5],
-    [ -5,  0,  0,  0,  0,  0,  0, -5],
-    [ -5,  0,  0,  0,  0,  0,  0, -5],
-    [ -5,  0,  0,  0,  0,  0,  0, -5],
-    [ -5,  0,  0,  0,  0,  0,  0, -5], 
-    [  0,  0,  0,  5,  5,  0,  0,  0]
+    [  0,  0,  0,  0,  0,  0,  0,  0]
 ];
 var QUEEN_TABLE = [
     [-20,-10,-10, -5, -5,-10,-10,-20],
@@ -56,17 +90,16 @@ var QUEEN_TABLE = [
     [-20,-10,-10, -5, -5,-10,-10,-20]
 ];
 var KING_TABLE = [
-    [-30,-40,-40,-50,-50,-40,-40,-30], 
-    [-30,-40,-40,-50,-50,-40,-40,-30], 
-    [-30,-40,-40,-50,-50,-40,-40,-30],
-    [-30,-40,-40,-50,-50,-40,-40,-30],
-    [-20,-30,-30,-40,-40,-30,-30,-20], 
-    [-10,-20,-20,-20,-20,-20,-20,-10],
+    [ 20, 30, 10,  0,  0, 10, 30, 20],
     [ 20, 20,  0,  0,  0,  0, 20, 20],
-    [ 20, 30, 10,  0,  0, 10, 30, 20]
+    [-10,-20,-20,-20,-20,-20,-20,-10],
+    [-20,-30,-30,-40,-40,-30,-30,-20],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30]
 ];
 
-// 🌟 버그 수정: c++ 오타 고침! 엔진이 더 이상 뻗지 않고 기물을 전개합니다.
 function evaluateBoard(boardMatrix) {
     var score = 0;
     for (var r = 0; r < 8; r++) {
@@ -95,15 +128,10 @@ function evaluateBoard(boardMatrix) {
 
 function minimax(gameObj, depth, alpha, beta, isMaximizing) {
     if (gameObj.game_over()) {
-        // 🌟 버그 수정: 체크메이트 점수에 depth(깊이)를 더해서 빨리 킬각을 잡도록 강제함!
-        if (gameObj.in_checkmate()) {
-            return gameObj.turn() === 'w' ? (-999999 - depth) : (999999 + depth);
-        }
+        if (gameObj.in_checkmate()) return gameObj.turn() === 'w' ? (-999999 - depth) : (999999 + depth);
         if (gameObj.in_draw()) return 0;
     }
-    if (depth === 0) {
-        return evaluateBoard(gameObj.board());
-    }
+    if (depth === 0) return evaluateBoard(gameObj.board());
 
     var moves = gameObj.moves();
     if (isMaximizing) {
@@ -129,45 +157,24 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
     }
 }
 
-// 🌟 버그 수정: Lichess API 주소(play=) 정상 작동 및 에러 방지 처리 완료!
-async function getOpeningBookMove() {
-    if (game.history().length >= 16) return null;
-    var movesParam = game.history().join(",");
-    var url = `https://explorer.lichess.ovh/masters?play=${movesParam}&topGames=0`;
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1000); 
-        var response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            var data = await response.json();
-            if (data && data.moves && data.moves.length > 0) {
-                var maxIndex = Math.min(data.moves.length, 3);
-                var randomIndex = Math.floor(Math.random() * maxIndex);
-                var nextMoveSan = data.moves[randomIndex].san; 
-                var legalMoves = game.moves();
-                if (legalMoves.includes(nextMoveSan)) {
-                    return nextMoveSan; 
-                }
-            }
+// 🌟 오프닝 족보 확인 후 미니맥스로 넘어가는 완벽한 로직
+function getBestMove() {
+    var historyStr = game.history().join(" ");
+    
+    // 족보에 지금 기보가 존재하면 계산 안 하고 바로 정석 수 반환!
+    if (OPENING_BOOK[historyStr]) {
+        var bookMoves = OPENING_BOOK[historyStr];
+        var chosenMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
+        var legalMoves = game.moves();
+        if (legalMoves.includes(chosenMove)) {
+            return chosenMove;
         }
-    } catch (e) {
-        console.log("Opening DB fetch skipped, using engine calculation.");
     }
-    return null;
-}
-
-async function getBestMove() {
-    var bookMove = await getOpeningBookMove();
-    if (bookMove) return bookMove; 
 
     var moves = game.moves();
     var bestMove = null;
     var bestValue = Infinity;
     
-    // 🌟 최적화: 체크메이트(#)를 가장 먼저 확인하도록 정렬
     moves.sort(function(a, b) {
         if (a.includes('#')) return -1;
         if (b.includes('#')) return 1;
@@ -193,8 +200,8 @@ function onDragStart(source, piece, position, orientation) {
 
 function makeComputerMove() {
     $status.text('computer is thinking...');
-    setTimeout(async function() {
-        var move = await getBestMove(); 
+    setTimeout(function() {
+        var move = getBestMove(); 
         game.move(move);
         board.position(game.fen());
         updateStatus();
