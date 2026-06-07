@@ -15,12 +15,10 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; margin: 0; position: relative; overflow: hidden;
         }
-
-        /* 🌟 모던 시작 메뉴 스타일 (사진 감성 + 네온 모던) */
         #start-screen {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #111; /* 사진처럼 아주 어두운 배경 */
+            background-color: #111;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             z-index: 9999;
             transition: opacity 0.6s ease, visibility 0.6s;
@@ -34,39 +32,38 @@
             font-size: 52px;
             font-weight: 800;
             letter-spacing: 4px;
-            margin-bottom: 50px;
-            /* 모던한 네온 글로우 효과 */
+            margin-bottom: 40px;
             text-shadow: 0 0 10px rgba(135, 206, 235, 0.4), 0 0 20px rgba(135, 206, 235, 0.2);
         }
-        .start-btn {
-            background: transparent;
-            color: white;
-            border: 2px solid white;
-            padding: 15px 50px;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 3px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s ease;
+        .btn-group {
+            display: flex; gap: 20px; justify-content: center;
         }
-        /* START 버튼 마우스 호버 효과 */
-        .start-btn:hover {
-            background: white;
-            color: #111;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
-            transform: scale(1.05);
+        .start-btn {
+            background: transparent; padding: 12px 40px; font-size: 20px;
+            font-weight: bold; letter-spacing: 2px; cursor: pointer;
+            border-radius: 4px; transition: all 0.3s ease;
+        }
+        .btn-white {
+            color: white; border: 2px solid white;
+        }
+        .btn-white:hover {
+            background: white; color: #111;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6); transform: scale(1.05);
+        }
+        .btn-black {
+            color: #aaa; border: 2px solid #555; background: #1a1a1a;
+        }
+        .btn-black:hover {
+            color: white; border-color: #fff; background: #333;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transform: scale(1.05);
         }
         @keyframes fadeIn {
             0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
         }
-
-        /* 기존 체스판 및 UI 스타일 */
         #main-game-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; /* 처음엔 숨김 */
-            transition: opacity 0.8s ease;
+            opacity: 0; transition: opacity 0.8s ease;
         }
         #top-bar {
             width: 400px; background-color: #232323; padding: 10px;
@@ -91,12 +88,30 @@
         #status {
             margin-top: 15px; font-size: 18px; color: skyblue; font-weight: bold;
         }
+
+        /* 🌟 모던하게 변경된 체크메이트 배너 */
         #checkmate-banner {
-            display: none; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 38px; font-weight: 900; color: #ff3333; text-align: center;
-            text-shadow: 4px 4px 20px rgba(0,0,0,0.9), -1px -1px 0 #fff;
-            z-index: 2000; pointer-events: none; letter-spacing: 1px; width: 90%; line-height: 1.3;
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(17, 17, 17, 0.85); /* 반투명 다크 배경 */
+            border: 2px solid skyblue;
+            box-shadow: 0 0 20px rgba(135, 206, 235, 0.2), inset 0 0 15px rgba(135, 206, 235, 0.1);
+            padding: 30px 60px;
+            border-radius: 12px;
+            font-size: 38px; font-weight: 900; color: #fff; text-align: center;
+            letter-spacing: 3px; line-height: 1.4;
+            z-index: 2000; pointer-events: none;
+            backdrop-filter: blur(4px);
         }
+        /* 우승자 글씨만 하늘색으로 강조 */
+        .winner-text {
+            color: skyblue;
+            font-size: 26px;
+            font-weight: bold;
+            display: block;
+            margin-top: 5px;
+            text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
+        }
+
         #analysis-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
@@ -123,8 +138,11 @@
 
     <div id="start-screen">
         <div class="start-content">
-            <div class="start-title">sky blue bot</div>
-            <button class="start-btn" onclick="startChessGame()">START</button>
+            <div class="start-title">skyblue bot v1</div>
+            <div class="btn-group">
+                <button class="start-btn btn-white" onclick="selectColor('w')">WHITE</button>
+                <button class="start-btn btn-black" onclick="selectColor('b')">BLACK</button>
+            </div>
         </div>
     </div>
 
@@ -136,6 +154,7 @@
         </div>
         
         <div id="checkmate-banner"></div>
+        
         <div id="myBoard"></div>
         <div id="status">skyblue bot v1</div>
     </div>
@@ -161,26 +180,24 @@
     </div>
 
     <script>
-        function startChessGame() {
+        function selectColor(color) {
+            if (typeof isEngineReady === 'undefined' || !isEngineReady) {
+                alert("Database is loading. Please wait a moment.");
+                return;
+            }
             var startScreen = document.getElementById('start-screen');
             var mainGame = document.getElementById('main-game-container');
             
-            // 1. 시작 화면 페이드 아웃
             startScreen.style.opacity = '0';
-            
             setTimeout(function() {
-                // 2. 시작 화면 완전히 숨기고 메인 게임 표시
                 startScreen.style.visibility = 'hidden';
                 mainGame.style.opacity = '1';
-                
-                // (선택사항) 시작할 때 보드 크기 꼬이는 현상 방지
-                if(typeof board !== 'undefined') {
-                    board.resize();
+                if (typeof startGameWithColor === "function") {
+                    startGameWithColor(color);
                 }
             }, 600);
         }
     </script>
-
     <script src="bot.js"></script>
 
 </body>
