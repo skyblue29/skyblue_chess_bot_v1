@@ -84,34 +84,43 @@
             font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;
         }
         #resign-btn:hover { background-color: #c9302c; }
-        #myBoard { width: 400px; }
+        #myBoard { width: 400px; position: relative; }
         #status {
             margin-top: 15px; font-size: 18px; color: skyblue; font-weight: bold;
         }
 
-        /* 🌟 모던하게 변경된 체크메이트 배너 */
-        #checkmate-banner {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(17, 17, 17, 0.85); /* 반투명 다크 배경 */
-            border: 2px solid skyblue;
-            box-shadow: 0 0 20px rgba(135, 206, 235, 0.2), inset 0 0 15px rgba(135, 206, 235, 0.1);
-            padding: 30px 60px;
-            border-radius: 12px;
-            font-size: 38px; font-weight: 900; color: #fff; text-align: center;
-            letter-spacing: 3px; line-height: 1.4;
-            z-index: 2000; pointer-events: none;
-            backdrop-filter: blur(4px);
+        /* 🌟 체스닷컴 스타일 가이드 안내 점 및 링 디자인 */
+        .suggested-dot {
+            width: 18px; height: 18px;
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 50%; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 500;
         }
-        /* 우승자 글씨만 하늘색으로 강조 */
-        .winner-text {
-            color: skyblue;
-            font-size: 26px;
-            font-weight: bold;
-            display: block;
-            margin-top: 5px;
-            text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
+        .suggested-ring {
+            width: 42px; height: 42px;
+            border: 5px solid rgba(255, 255, 255, 0.35);
+            border-radius: 50%; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 500; box-sizing: border-box;
+        }
+        .highlight-selected {
+            box-shadow: inset 0 0 0 4px skyblue !important;
         }
 
+        #checkmate-banner {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(17, 17, 17, 0.85); border: 2px solid skyblue;
+            box-shadow: 0 0 20px rgba(135, 206, 235, 0.2), inset 0 0 15px rgba(135, 206, 235, 0.1);
+            padding: 30px 60px; border-radius: 12px;
+            font-size: 38px; font-weight: 900; color: #fff; text-align: center;
+            letter-spacing: 3px; line-height: 1.4; z-index: 2000; pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .winner-text {
+            color: skyblue; font-size: 26px; font-weight: bold; display: block; margin-top: 5px;
+            text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
+        }
         #analysis-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
@@ -154,14 +163,13 @@
         </div>
         
         <div id="checkmate-banner"></div>
-        
         <div id="myBoard"></div>
         <div id="status">skyblue bot v1</div>
     </div>
 
     <div id="analysis-modal">
         <div class="modal-content">
-            <h2 id="modal-title">Analyzing Game...</h2>
+            <h2 id="modal-title">analyzing game...</h2>
             <div id="progress-bar"><div id="progress-fill"></div></div>
             <div id="stats-container" style="display: none;">
                 <div class="stat-row" style="color:#1baca6"><span>Brilliant</span><span id="stat-brilliant">0</span></div>
@@ -182,7 +190,7 @@
     <script>
         function selectColor(color) {
             if (typeof isEngineReady === 'undefined' || !isEngineReady) {
-                alert("Database is loading. Please wait a moment.");
+                alert("database loading.. please wait");
                 return;
             }
             var startScreen = document.getElementById('start-screen');
