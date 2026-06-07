@@ -8,6 +8,7 @@ var ecoFiles = ['ecoA.json', 'ecoB.json', 'ecoC.json', 'ecoD.json', 'ecoE.json',
 var loadedCount = 0;
 var isEngineReady = false;
 var playerColor = 'w';
+var selectedSquare = null;
 
 var engineWorker = new Worker('worker.js');
 
@@ -31,16 +32,42 @@ function loadEcoFiles() {
 }
 loadEcoFiles();
 
+function removeGreyDots() {
+    $('#myBoard .suggested-dot, #myBoard .suggested-ring').remove();
+    $('#myBoard .square-55d63').removeClass('highlight-selected');
+}
+
+function showGreyDots(square) {
+    removeGreyDots();
+    $('.square-' + square).addClass('highlight-selected');
+    
+    var moves = game.moves({ square: square, verbose: true });
+    for (var i = 0; i < moves.length; i++) {
+        var targetSquare = moves[i].to;
+        var $targetEl = $('.square-' + targetSquare);
+        if (game.get(targetSquare)) {
+            $targetEl.append('<div class="suggested-ring"></div>');
+        } else {
+            $targetEl.append('<div class="suggested-dot"></div>');
+        }
+    }
+}
+
 function startGameWithColor(color) {
     playerColor = color;
+    game.reset();
+    
+    board.orientation(color === 'b' ? 'black' : 'white');
+    board.position('start');
+    
+    removeGreyDots();
+    selectedSquare = null;
+    
+    $('#history').text("Game Start");
+    $('#opening-name').text("Starting Position");
+    
     if (color === 'b') {
-        board.orientation('black');
         makeComputerMove();
-    } else {
-        board.orientation('white');
-    }
-    if (typeof board !== 'undefined') {
-        board.resize();
     }
 }
 
@@ -110,16 +137,59 @@ function onDragStart(source, piece) {
     if (game.game_over()) return false;
     if (piece.charAt(0) !== playerColor) return false;
     if (!isEngineReady) { alert("Please wait. The opening database is still loading."); return false; }
+    removeGreyDots();
+    selectedSquare = null;
 }
 
 function onDrop(source, target) {
     var move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) return 'snapback';
     updateStatus();
+    removeGreyDots();
+    selectedSquare = null;
     if (!game.game_over()) makeComputerMove();
 }
 
 function onSnapEnd() { board.position(game.fen()); }
+
+$(document).on('click', '#myBoard .square-55d63', function() {
+    if (!isEngineReady || game.game_over()) return;
+    
+    var classes = $(this).attr('class').split(' ');
+    var square = null;
+    for (var i = 0; i < classes.length; i++) {
+        if (classes[i].indexOf('square-') === 0 && classes[i] !== 'square-55d63') {
+            square = classes[i].replace('square-', '');
+            break;
+        }
+    }
+    if (!square) return;
+    
+    var piece = game.get(square);
+    
+    if (selectedSquare) {
+        var moves = game.moves({ square: selectedSquare, verbose: true });
+        var isValidMove = moves.some(m => m.to === square);
+        
+        if (isValidMove) {
+            game.move({ from: selectedSquare, to: square, promotion: 'q' });
+            board.position(game.fen());
+            removeGreyDots();
+            selectedSquare = null;
+            updateStatus();
+            if (!game.game_over()) makeComputerMove();
+            return;
+        }
+    }
+    
+    if (piece && piece.color === playerColor) {
+        selectedSquare = square;
+        showGreyDots(square);
+    } else {
+        removeGreyDots();
+        selectedSquare = null;
+    }
+});
 
 function updateStatus() {
     if (!isEngineReady) return;
@@ -141,7 +211,6 @@ function updateStatus() {
     else if (game.in_draw()) triggerGameOver('Draw');
 }
 
-// 🌟 업데이트 됨: 체크메이트 5초 페이드아웃 및 텍스트 모던화
 function triggerGameOver(reason) {
     if (game.history().length < 2) {
         alert("The game is too short to analyze.");
@@ -150,17 +219,10 @@ function triggerGameOver(reason) {
     $status.text('Game Over: ' + reason);
 
     if (reason === 'Checkmate') {
-        var winnerText = (game.turn() === 'w') ? "CHECKMATE<br><span class='winner-text'>Black Wins</span>" : "CHECKMATE<br><span class='winner-text'>White Wins</span>";
-        
-        // 배너 띄우기
+        var winnerText = (game.turn() === 'w') ? "CHECKMATE<br><span class='winner-text'>Black Wins</span>" : "CHECKMATE!<br><span class='winner-text'>White Wins</span>";
         $('#checkmate-banner').html(winnerText).fadeIn(300);
-        
-        // 1.5초 뒤에 분석 모달창 표시
         setTimeout(function() { showAnalysisModal(reason); }, 1500);
-        
-        // 🌟 5초(5000ms) 동안 서서히 투명해지며 사라지게 설정 (분석 화면을 가리지 않음)
         $('#checkmate-banner').fadeOut(5000);
-        
     } else {
         showAnalysisModal(reason);
     }
@@ -188,10 +250,9 @@ async function runAnalysis() {
             if (countThisMove) stats.book++;
             tempGame.move(moveStr);
         } else {
-            // 엔진 워커 없이 단순 분석용 가벼운 로직 (기존 유지)
             tempGame.move(moveStr);
             if (countThisMove) {
-                stats.good++; // UI 퍼포먼스를 위해 딥 러닝 분석은 생략하고 임시 마킹
+                stats.good++;
             }
         }
         var percent = Math.round(((i + 1) / history.length) * 100);
