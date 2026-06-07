@@ -18,7 +18,12 @@
         #top-bar {
             width: 400px; background-color: #232323; padding: 10px;
             text-align: center; font-weight: bold; font-size: 14px;
-            border-radius: 5px 5px 0 0; box-sizing: border-box; border-bottom: 2px solid #444;
+            border-radius: 5px 5px 0 0; box-sizing: border-box; border-bottom: 1px solid #444;
+        }
+        #opening-name {
+            width: 400px; background-color: #232323; color: #f0d9b5;
+            text-align: center; font-size: 13px; font-style: italic;
+            padding: 5px; box-sizing: border-box; border-bottom: 2px solid #444;
         }
         #control-panel {
             width: 400px; background-color: #2a2a2a; padding: 8px; box-sizing: border-box;
@@ -64,6 +69,7 @@
 <body>
 
     <div id="top-bar">Game History: <span id="history">Game Start</span></div>
+    <div id="opening-name">Starting Position</div>
     <div id="control-panel">
         <button id="resign-btn" onclick="triggerGameOver('Resignation')">Resign</button>
     </div>
@@ -91,31 +97,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        var ECO_DATA_MASTER = {};
-        var ecoCategories = ['A', 'B', 'C', 'D', 'E'];
-        var ecoLoaded = 0;
-        
-        function fetchEcoDatabaseRecursively() {
-            if (ecoLoaded >= ecoCategories.length) {
-                console.log("ECO Master Engine Online");
-                return;
-            }
-            var cat = ecoCategories[ecoLoaded];
-            var targetUrl = 'https://raw.githubusercontent.com/JeffML/eco.json/master/eco' + cat + '.json';
-            
-            $.getJSON(targetUrl, function(data) {
-                Object.assign(ECO_DATA_MASTER, data);
-                ecoLoaded++;
-                fetchEcoDatabaseRecursively();
-            }).fail(function() {
-                ecoLoaded++;
-                fetchEcoDatabaseRecursively();
-            });
-        }
-        fetchEcoDatabaseRecursively();
-    </script>
 
     <script src="bot.js"></script>
 
