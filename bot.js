@@ -33,17 +33,22 @@ loadEcoFiles();
 
 function removeGreyDots() {
     $('#myBoard .suggested-dot, #myBoard .suggested-ring').remove();
-    $('#myBoard .square-55d63').removeClass('highlight-selected');
+    $('#myBoard div[class*="square-"]').removeClass('highlight-selected');
 }
 
 function showGreyDots(square) {
     removeGreyDots();
+    
+    // 클릭한 내 기물에 하이라이트 표시
     $('#myBoard .square-' + square).addClass('highlight-selected');
     
+    // 이동 가능한 목적지 목록 추출
     var moves = game.moves({ square: square, verbose: true });
     for (var i = 0; i < moves.length; i++) {
         var targetSquare = moves[i].to;
         var $targetEl = $('#myBoard .square-' + targetSquare);
+        
+        // 상대방 기물을 잡을 수 있는 위치면 원형 링(ring), 빈 칸이면 꽉 찬 원(dot)
         if (game.get(targetSquare)) {
             $targetEl.append('<div class="suggested-ring"></div>');
         } else {
@@ -136,56 +141,84 @@ function onDragStart(source, piece) {
     if (game.game_over()) return false;
     if (piece.charAt(0) !== playerColor) return false;
     if (!isEngineReady) return false;
-    removeGreyDots();
-    selectedSquare = null;
+    
+    // 드래그를 시작하면 즉시 기존 가이드 점을 지우고 현재 드래그 중인 기물의 가이드 점을 보여줍니다.
+    selectedSquare = source;
+    showGreyDots(source);
 }
 
 function onDrop(source, target) {
     var move = game.move({ from: source, to: target, promotion: 'q' });
-    if (move === null) return 'snapback';
+    if (move === null) {
+        removeGreyDots();
+        selectedSquare = null;
+        return 'snapback';
+    }
+    
     updateStatus();
     removeGreyDots();
     selectedSquare = null;
+    
     if (!game.game_over()) makeComputerMove();
 }
 
 function onSnapEnd() { board.position(game.fen()); }
 
-$(document).on('click', '#myBoard .square-55d63', function() {
+// 🌟 클릭 이동 로직 완전 고도화: 어떤 브라우저에서도 정확하게 좌표를 잡아냅니다.
+$(document).on('click', '#myBoard div[class*="square-"]', function(event) {
     if (!isEngineReady || game.game_over()) return;
+    if (game.turn() !== playerColor) return; // 봇이 생각 중일 때는 클릭 방지
+
+    // 1. 클릭한 칸의 이름(예: e4, d5)을 클래스 이름에서 정확하게 파싱해냅니다.
+    var className = $(this).attr('class');
+    var match = className.match(/square-([a-h][1-8])/);
+    if (!match) return;
     
-    var square = $(this).attr('data-square');
-    if (!square) return;
+    var clickedSquare = match[1];
+    var pieceOnClickedSquare = game.get(clickedSquare);
     
-    var piece = game.get(square);
-    
+    // 2. 이미 기물이 선택된 상태에서 목적지를 클릭했을 때
     if (selectedSquare) {
         var moves = game.moves({ square: selectedSquare, verbose: true });
         var isValidMove = false;
+        
         for (var i = 0; i < moves.length; i++) {
-            if (moves[i].to === square) {
+            if (moves[i].to === clickedSquare) {
                 isValidMove = true;
                 break;
             }
         }
         
+        // 이동 가능한 곳이면 즉각 이동
         if (isValidMove) {
-            game.move({ from: selectedSquare, to: square, promotion: 'q' });
-            board.position(game.fen());
+            game.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
+            board.position(game.fen()); // 화면 강제 갱신
             removeGreyDots();
             selectedSquare = null;
             updateStatus();
+            
             if (!game.game_over()) makeComputerMove();
+            return;
+        }
+        
+        // 만약 이동할 수 없는 빈 칸을 클릭했다면 선택을 취소합니다.
+        if (!pieceOnClickedSquare || pieceOnClickedSquare.color !== playerColor) {
+            removeGreyDots();
+            selectedSquare = null;
             return;
         }
     }
     
-    if (piece && piece.color === playerColor) {
-        selectedSquare = square;
-        showGreyDots(square);
-    } else {
-        removeGreyDots();
-        selectedSquare = null;
+    // 3. 내 기물을 새롭게 클릭했을 때
+    if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
+        // 이미 선택된 기물을 또 누르면 선택 취소
+        if (selectedSquare === clickedSquare) {
+            removeGreyDots();
+            selectedSquare = null;
+        } else {
+            selectedSquare = clickedSquare;
+            showGreyDots(clickedSquare);
+        }
     }
 });
 
