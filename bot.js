@@ -5,6 +5,30 @@ var $status = $('#status');
 
 var PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
 
+// 🌟 안전장치: 외부 데이터가 없어도 무조건 돌아가는 내장 마스터 족보
+var OPENING_BOOK = {
+    "": ["e4", "d4", "c4", "Nf3"],
+    "e4": ["e5", "c5", "e6", "c6"],
+    "d4": ["Nf6", "d5", "e6"],
+    "c4": ["e5", "c5", "Nf6"],
+    "Nf3": ["Nf6", "d5", "c5"],
+    "e4 e5": ["Nf3", "Nc3", "Bc4"],
+    "e4 c5": ["Nf3", "Nc3", "d6", "e6"],
+    "e4 e6": ["d4"],
+    "e4 c6": ["d4"],
+    "d4 d5": ["c4", "Nf3", "Bf4"],
+    "d4 Nf6": ["c4", "Nf3", "g3"],
+    "e4 e5 Nf3": ["Nc6", "Nf6", "d6"],
+    "e4 c5 Nf3": ["d6", "Nc6", "e6", "a6"],
+    "d4 d5 c4": ["e6", "c6", "dxc4"],
+    "d4 Nf6 c4": ["e6", "g6", "c5"],
+    "e4 e5 Nf3 Nc6": ["Bb5", "Bc4", "d4"],
+    "e4 e5 Nf3 Nf6": ["Nxe5", "d4", "Nc3"],
+    "e4 e5 Nf3 d6": ["d4", "Bc4"],
+    "e4 e5 Bc4": ["Nf6", "Nc6", "Bc5"],
+    "e4 e5 Nc3": ["Nf6", "Nc6", "Bc4"]
+};
+
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
     [ 10, 10, 10,-40,-40, 10, 10, 10], 
@@ -15,7 +39,6 @@ var PAWN_TABLE = [
     [ 80, 80, 80, 80, 80, 80, 80, 80], 
     [  0,  0,  0,  0,  0,  0,  0,  0]  
 ];
-
 var KNIGHT_TABLE = [
     [-50,-40,-30,-30,-30,-30,-40,-50],
     [-40,-20,  0,  0,  0,  0,-20,-40],
@@ -26,7 +49,6 @@ var KNIGHT_TABLE = [
     [-40,-20,  0,  5,  5,  0,-20,-40],
     [-50,-40,-30,-30,-30,-30,-40,-50]
 ];
-
 var BISHOP_TABLE = [
     [-20,-10,-10,-10,-10,-10,-10,-20],
     [-10,  0,  0,  0,  0,  0,  0,-10],
@@ -37,7 +59,6 @@ var BISHOP_TABLE = [
     [-10,  5,  0,  0,  0,  0,  5,-10],
     [-20,-10,-10,-10,-10,-10,-10,-20]
 ];
-
 var ROOK_TABLE = [
     [  0,  0,  0,  5,  5,  0,  0,  0],
     [ -5,  0,  0,  0,  0,  0,  0, -5],
@@ -48,7 +69,6 @@ var ROOK_TABLE = [
     [  5, 10, 10, 10, 10, 10, 10,  5],
     [  0,  0,  0,  0,  0,  0,  0,  0]
 ];
-
 var QUEEN_TABLE = [
     [-20,-10,-10, -5, -5,-10,-10,-20],
     [-10,  0,  0,  0,  0,  0,  0,-10],
@@ -59,7 +79,6 @@ var QUEEN_TABLE = [
     [-10,  0,  5,  0,  0,  0,  0,-10],
     [-20,-10,-10, -5, -5,-10,-10,-20]
 ];
-
 var KING_TABLE = [
     [ 20, 30, 10,  0,  0, 10, 30, 20],
     [ 20, 20,  0,  0,  0,  0, 20, 20],
@@ -129,34 +148,24 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
 }
 
 function getBestMove() {
-    var fullFen = game.fen();
-    // API Specification: Try to match using full FEN or position fallback
-    var positionOnlyFen = fullFen.split(' ')[0];
-    
-    var matchedOpening = ECO_DATA_MASTER[fullFen] || ECO_DATA_MASTER[positionOnlyFen];
-    
-    if (matchedOpening && matchedOpening.moves) {
-        var theoryMoves = matchedOpening.moves.split(' ');
-        var playedHistory = game.history();
-        var nextTheoryMoveIdx = playedHistory.length;
-        
-        if (nextTheoryMoveIdx < theoryMoves.length) {
-            var nextMoveCandidate = theoryMoves[nextTheoryMoveIdx];
-            // Remove move numbers if any (e.g. "1.e4" -> "e4")
-            if (nextMoveCandidate.indexOf('.') !== -1) {
-                nextMoveCandidate = nextMoveCandidate.split('.')[1];
-            }
-            
-            var legalMoves = game.moves();
-            if (legalMoves.indexOf(nextMoveCandidate) !== -1) {
-                return nextMoveCandidate;
-            }
+    // 1. 오프닝 족보 우선 확인
+    var historyStr = game.history().join(" ");
+    if (OPENING_BOOK[historyStr]) {
+        var bookMoves = OPENING_BOOK[historyStr];
+        var chosenMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
+        var legalMoves = game.moves();
+        if (legalMoves.indexOf(chosenMove) !== -1) {
+            return chosenMove;
         }
     }
 
+    // 🌟 완전 수정됨: 이제 봇이 자신이 백인지 흑인지 정확히 인지합니다!
     var moves = game.moves();
+    var isWhite = (game.turn() === 'w');
     var bestMove = null;
-    var bestValue = Infinity;
+    
+    // 백이면 가장 높은 점수(-Infinity)를, 흑이면 가장 낮은 점수(Infinity)를 찾습니다.
+    var bestValue = isWhite ? -Infinity : Infinity; 
     
     moves.sort(function(a, b) {
         if (a.indexOf('#') !== -1) return -1;
@@ -169,18 +178,30 @@ function getBestMove() {
     for (var i = 0; i < moves.length; i++) {
         var move = moves[i];
         game.move(move);
-        var boardValue = minimax(game, 2, -Infinity, Infinity, true); 
+        
+        // 내가 수를 뒀으니, 다음 턴은 상대방(isWhite의 반대)의 턴으로 계산합니다.
+        var boardValue = minimax(game, 2, -Infinity, Infinity, !isWhite); 
 
+        // 🌟 수정됨: 백일 때는 중앙 폰 전개 시 +600점, 흑일 때는 -600점을 주어 올바르게 유도합니다.
         if (game.history().length <= 8) {
-            if (move === 'e5' || move === 'd5' || move === 'c5' || move === 'e6' || move === 'd6') {
-                boardValue -= 600; 
+            if (move === 'e4' || move === 'd4' || move === 'c4' || move === 'e5' || move === 'd5' || move === 'c5' || move === 'e6' || move === 'd6') {
+                boardValue += isWhite ? 600 : -600; 
             }
         }
 
         game.undo();
-        if (boardValue < bestValue) {
-            bestValue = boardValue;
-            bestMove = move;
+        
+        // 백이면 더 큰 점수를, 흑이면 더 작은 점수를 선택합니다.
+        if (isWhite) {
+            if (boardValue > bestValue) {
+                bestValue = boardValue;
+                bestMove = move;
+            }
+        } else {
+            if (boardValue < bestValue) {
+                bestValue = boardValue;
+                bestMove = move;
+            }
         }
     }
     return bestMove || moves[Math.floor(Math.random() * moves.length)];
