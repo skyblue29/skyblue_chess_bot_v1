@@ -13,7 +13,60 @@
             background-color: #222; color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; margin: 0; position: relative;
+            height: 100vh; margin: 0; position: relative; overflow: hidden;
+        }
+
+        /* 🌟 모던 시작 메뉴 스타일 (사진 감성 + 네온 모던) */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #111; /* 사진처럼 아주 어두운 배경 */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .start-content {
+            text-align: center;
+            animation: fadeIn 1.2s ease-out forwards;
+        }
+        .start-title {
+            color: skyblue;
+            font-size: 52px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            margin-bottom: 50px;
+            /* 모던한 네온 글로우 효과 */
+            text-shadow: 0 0 10px rgba(135, 206, 235, 0.4), 0 0 20px rgba(135, 206, 235, 0.2);
+        }
+        .start-btn {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        /* START 버튼 마우스 호버 효과 */
+        .start-btn:hover {
+            background: white;
+            color: #111;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 기존 체스판 및 UI 스타일 */
+        #main-game-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; /* 처음엔 숨김 */
+            transition: opacity 0.8s ease;
         }
         #top-bar {
             width: 400px; background-color: #232323; padding: 10px;
@@ -68,15 +121,24 @@
 </head>
 <body>
 
-    <div id="top-bar">Game History: <span id="history">Game Start</span></div>
-    <div id="opening-name">Starting Position</div>
-    <div id="control-panel">
-        <button id="resign-btn" onclick="triggerGameOver('Resignation')">Resign</button>
+    <div id="start-screen">
+        <div class="start-content">
+            <div class="start-title">sky blue bot</div>
+            <button class="start-btn" onclick="startChessGame()">START</button>
+        </div>
     </div>
-    
-    <div id="checkmate-banner"></div>
-    <div id="myBoard"></div>
-    <div id="status">skyblue bot v1</div>
+
+    <div id="main-game-container">
+        <div id="top-bar">Game History: <span id="history">Game Start</span></div>
+        <div id="opening-name">Starting Position</div>
+        <div id="control-panel">
+            <button id="resign-btn" onclick="triggerGameOver('Resignation')">Resign</button>
+        </div>
+        
+        <div id="checkmate-banner"></div>
+        <div id="myBoard"></div>
+        <div id="status">skyblue bot v1</div>
+    </div>
 
     <div id="analysis-modal">
         <div class="modal-content">
@@ -93,10 +155,31 @@
                 <div class="stat-row" style="color:#e88c3a"><span>Mistake</span><span id="stat-mistake">0</span></div>
                 <div class="stat-row" style="color:#ca3431"><span>Miss</span><span id="stat-miss">0</span></div>
                 <div class="stat-row" style="color:#ca3431"><span>Blunder</span><span id="stat-blunder">0</span></div>
-                <button class="btn-restart" onclick="resetGame()">Start New Game</button>
+                <button class="btn-restart" onclick="location.reload()">Start New Game</button>
             </div>
         </div>
     </div>
+
+    <script>
+        function startChessGame() {
+            var startScreen = document.getElementById('start-screen');
+            var mainGame = document.getElementById('main-game-container');
+            
+            // 1. 시작 화면 페이드 아웃
+            startScreen.style.opacity = '0';
+            
+            setTimeout(function() {
+                // 2. 시작 화면 완전히 숨기고 메인 게임 표시
+                startScreen.style.visibility = 'hidden';
+                mainGame.style.opacity = '1';
+                
+                // (선택사항) 시작할 때 보드 크기 꼬이는 현상 방지
+                if(typeof board !== 'undefined') {
+                    board.resize();
+                }
+            }, 600);
+        }
+    </script>
 
     <script src="bot.js"></script>
 
