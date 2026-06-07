@@ -41,14 +41,15 @@ function loadEcoFiles() {
 
 loadEcoFiles();
 
+// 수정됨: 중앙으로 전진할수록 가산점이 높아지는 정상적인 폰 테이블
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
-    [ 10, 10, 10,-40,-40, 10, 10, 10], 
-    [ 10, 10, 20, 20, 20, 20, 10, 10], 
-    [ 10, 10, 20, 60, 60, 20, 10, 10], 
-    [ 20, 20, 30, 40, 40, 30, 20, 20], 
-    [ 30, 30, 40, 50, 50, 40, 30, 30], 
-    [ 80, 80, 80, 80, 80, 80, 80, 80], 
+    [ 50, 50, 50, 50, 50, 50, 50, 50], 
+    [ 10, 10, 20, 30, 30, 20, 10, 10], 
+    [  5,  5, 10, 25, 25, 10,  5,  5], 
+    [  0,  0,  0, 20, 20,  0,  0,  0], 
+    [  5, -5,-10,  0,  0,-10, -5,  5], 
+    [  5, 10, 10,-20,-20, 10, 10,  5], 
     [  0,  0,  0,  0,  0,  0,  0,  0]  
 ];
 
@@ -168,47 +169,61 @@ function getBestMove() {
     var historyStr = game.history().join(" ");
     var legalMoves = game.moves();
     
+    // 수정됨: 훨씬 더 깊어지고 촘촘해진 1티어 정석 사전 (히포포타무스 차단)
     var ELITE_OPENINGS = {
         "": ["e4", "d4", "c4", "Nf3"],
         "e4": ["c5", "e5", "e6", "c6"],
         "d4": ["Nf6", "d5", "e6"],
         "c4": ["e5", "c5", "Nf6"],
         "Nf3": ["Nf6", "d5", "c5"],
-        "e4 e5": ["Nf3", "Nc3", "Bc4"],
-        "e4 c5": ["Nf3", "Nc3", "d6", "e6"],
+        
+        // 프렌치 디펜스 메인 라인
         "e4 e6": ["d4"],
-        "e4 c6": ["d4"],
-        "d4 d5": ["c4", "Nf3", "Bf4"],
-        "d4 Nf6": ["c4", "Nf3", "g3"],
-        "e4 e5 Nf3": ["Nc6", "Nf6", "d6"],
-        "e4 c5 Nf3": ["d6", "Nc6", "e6", "a6"],
-        "d4 d5 c4": ["e6", "c6", "dxc4"],
-        "d4 Nf6 c4": ["e6", "g6", "c5"],
-        "e4 e5 Nf3 Nc6": ["Bb5", "Bc4", "d4"],
-        "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"],
-        "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
-        "e4 e5 Nf3 Nc6 d4": ["exd4"],
-        "e4 e5 Nf3 Nf6": ["Nxe5", "d4", "Nc3"],
-        "e4 e5 Nf3 d6": ["d4", "Bc4"],
-        "e4 e5 Bc4": ["Nf6", "Nc6", "Bc5"],
-        "e4 e5 Nc3": ["Nf6", "Nc6", "Bc4"],
-        "e4 e6 d4 d5": ["Nc3", "Nd2", "exd5", "e5"],
-        "e4 c6 d4 d5": ["Nc3", "Nd2", "exd5", "e5"],
-        "d4 d5 c4 e6": ["Nc3", "Nf3", "Bf4"],
-        "d4 d5 c4 c6": ["Nf3", "Nc3", "e3"],
-        "d4 Nf6 c4 e6": ["Nf3", "Nc3", "g3"],
-        "d4 Nf6 c4 g6": ["Nc3", "Nf3"],
-        "e4 e5 Nf3 Nc6 Bb5 a6": ["Ba4", "Bxc6"],
-        "e4 e5 Nf3 Nc6 Bc4 Bc5": ["c3", "d3", "b4", "O-O"],
-        "e4 e5 Nf3 Nc6 Bc4 Nf6": ["d3", "Ng5", "d4"],
+        "e4 e6 d4": ["d5"],
+        "e4 e6 d4 d5": ["Nc3", "Nd2", "e5"],
+        "e4 e6 d4 d5 Nc3": ["Nf6", "Bb4"],
+        "e4 e6 d4 d5 Nc3 Nf6": ["Bg5", "e5"],
+        "e4 e6 d4 d5 e5": ["c5"],
+        "e4 e6 d4 d5 e5 c5": ["c3"],
+
+        // 시실리안 디펜스 메인 라인
+        "e4 c5": ["Nf3"],
+        "e4 c5 Nf3": ["d6", "Nc6", "e6"],
+        "e4 c5 Nf3 d6": ["d4"],
+        "e4 c5 Nf3 d6 d4": ["cxd4"],
         "e4 c5 Nf3 d6 d4 cxd4": ["Nxd4"],
-        "e4 c5 Nf3 Nc6 d4 cxd4": ["Nxd4"],
-        "e4 c5 Nf3 e6 d4 cxd4": ["Nxd4"],
+        "e4 c5 Nf3 d6 d4 cxd4 Nxd4": ["Nf6"],
         "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
-        "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
-        "e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
-        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": ["Be3", "Bg5", "Be2", "h3"],
-        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6": ["Be3", "Be2", "f4"]
+        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3": ["a6", "g6", "Nc6"],
+        "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3": ["e5", "d6"],
+
+        // 카로칸 디펜스 메인 라인
+        "e4 c6": ["d4"],
+        "e4 c6 d4": ["d5"],
+        "e4 c6 d4 d5": ["Nc3", "exd5", "e5"],
+        "e4 c6 d4 d5 Nc3": ["dxe4"],
+        "e4 c6 d4 d5 Nc3 dxe4": ["Nxe4"],
+        "e4 c6 d4 d5 Nc3 dxe4 Nxe4": ["Bf5", "Nd7"],
+
+        // e4 e5 라인 (루이 로페즈, 이탈리안 등)
+        "e4 e5": ["Nf3", "Nc3", "Bc4"],
+        "e4 e5 Nf3": ["Nc6", "Nf6"],
+        "e4 e5 Nf3 Nc6": ["Bb5", "Bc4"],
+        "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"],
+        "e4 e5 Nf3 Nc6 Bb5 a6": ["Ba4"],
+        "e4 e5 Nf3 Nc6 Bb5 a6 Ba4": ["Nf6"],
+        "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
+        "e4 e5 Nf3 Nc6 Bc4 Bc5": ["c3", "O-O", "d3"],
+
+        // d4 라인 (퀸즈 갬빗 등)
+        "d4 d5": ["c4", "Nf3", "Bf4"],
+        "d4 d5 c4": ["e6", "c6", "dxc4"],
+        "d4 d5 c4 e6": ["Nc3", "Nf3"],
+        "d4 d5 c4 e6 Nc3": ["Nf6", "Be7"],
+        "d4 d5 c4 c6": ["Nf3", "Nc3"],
+        "d4 Nf6 c4": ["e6", "g6"],
+        "d4 Nf6 c4 e6": ["Nc3", "Nf3"],
+        "d4 Nf6 c4 g6": ["Nc3", "g3"]
     };
 
     if (ELITE_OPENINGS[historyStr]) {
@@ -242,9 +257,16 @@ function getBestMove() {
         
         var boardValue = minimax(game, 2, -Infinity, Infinity, !isWhite); 
 
-        if (game.history().length <= 8) {
-            if (move === 'e4' || move === 'd4' || move === 'c4' || move === 'e5' || move === 'd5' || move === 'c5' || move === 'e6' || move === 'd6') {
-                boardValue += isWhite ? 600 : -600; 
+        // 수정됨: Anti-Hippopotamus 및 중앙 전개 강제 유도
+        if (game.history().length < 14) {
+            // 초반에 구석 폰(a, h)을 밀면 가차없이 점수 강등
+            if (move === 'a3' || move === 'a4' || move === 'h3' || move === 'h4' || 
+                move === 'a6' || move === 'a5' || move === 'h6' || move === 'h5') {
+                boardValue += isWhite ? -50 : 50; 
+            }
+            // 초반에 나이트(N)와 비숍(B)을 전개하면 점수 상승
+            if (move.charAt(0) === 'N' || move.charAt(0) === 'B') {
+                boardValue += isWhite ? 20 : -20;
             }
         }
 
