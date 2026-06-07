@@ -14,7 +14,6 @@ var engineWorker = new Worker('worker.js');
 
 function loadEcoFiles() {
     if (loadedCount >= ecoFiles.length) {
-        console.log("All ECO Files Integrated Successfully");
         isEngineReady = true;
         updateStatus();
         return;
@@ -39,12 +38,12 @@ function removeGreyDots() {
 
 function showGreyDots(square) {
     removeGreyDots();
-    $('.square-' + square).addClass('highlight-selected');
+    $('#myBoard .square-' + square).addClass('highlight-selected');
     
     var moves = game.moves({ square: square, verbose: true });
     for (var i = 0; i < moves.length; i++) {
         var targetSquare = moves[i].to;
-        var $targetEl = $('.square-' + targetSquare);
+        var $targetEl = $('#myBoard .square-' + targetSquare);
         if (game.get(targetSquare)) {
             $targetEl.append('<div class="suggested-ring"></div>');
         } else {
@@ -88,7 +87,7 @@ function getEliteOpeningMove() {
 
     if (ELITE_OPENINGS[historyStr]) {
         var prefMoves = ELITE_OPENINGS[historyStr];
-        var validPrefs = prefMoves.filter(m => legalMoves.indexOf(m) !== -1);
+        var validPrefs = prefMoves.filter(function(m) { return legalMoves.indexOf(m) !== -1; });
         if (validPrefs.length > 0) return validPrefs[Math.floor(Math.random() * validPrefs.length)];
     }
 
@@ -136,7 +135,7 @@ engineWorker.onmessage = function(e) {
 function onDragStart(source, piece) {
     if (game.game_over()) return false;
     if (piece.charAt(0) !== playerColor) return false;
-    if (!isEngineReady) { alert("Please wait. The opening database is still loading."); return false; }
+    if (!isEngineReady) return false;
     removeGreyDots();
     selectedSquare = null;
 }
@@ -155,21 +154,20 @@ function onSnapEnd() { board.position(game.fen()); }
 $(document).on('click', '#myBoard .square-55d63', function() {
     if (!isEngineReady || game.game_over()) return;
     
-    var classes = $(this).attr('class').split(' ');
-    var square = null;
-    for (var i = 0; i < classes.length; i++) {
-        if (classes[i].indexOf('square-') === 0 && classes[i] !== 'square-55d63') {
-            square = classes[i].replace('square-', '');
-            break;
-        }
-    }
+    var square = $(this).attr('data-square');
     if (!square) return;
     
     var piece = game.get(square);
     
     if (selectedSquare) {
         var moves = game.moves({ square: selectedSquare, verbose: true });
-        var isValidMove = moves.some(m => m.to === square);
+        var isValidMove = false;
+        for (var i = 0; i < moves.length; i++) {
+            if (moves[i].to === square) {
+                isValidMove = true;
+                break;
+            }
+        }
         
         if (isValidMove) {
             game.move({ from: selectedSquare, to: square, promotion: 'q' });
@@ -219,7 +217,7 @@ function triggerGameOver(reason) {
     $status.text('Game Over: ' + reason);
 
     if (reason === 'Checkmate') {
-        var winnerText = (game.turn() === 'w') ? "CHECKMATE<br><span class='winner-text'>Black Wins</span>" : "CHECKMATE!<br><span class='winner-text'>White Wins</span>";
+        var winnerText = (game.turn() === 'w') ? "CHECKMATE<br><span class='winner-text'>Black Wins</span>" : "CHECKMATE<br><span class='winner-text'>White Wins</span>";
         $('#checkmate-banner').html(winnerText).fadeIn(300);
         setTimeout(function() { showAnalysisModal(reason); }, 1500);
         $('#checkmate-banner').fadeOut(5000);
@@ -229,7 +227,7 @@ function triggerGameOver(reason) {
 }
 
 function showAnalysisModal(reason) {
-    $('#modal-title').text('Analyzing Game... (' + reason + ')');
+    $('#modal-title').text('analyzing game... (' + reason + ')');
     $('#stats-container').hide();
     $('#progress-bar').show();
     $('#analysis-modal').css('display', 'flex');
@@ -271,7 +269,7 @@ async function runAnalysis() {
     $('#stat-miss').text(stats.miss);
     $('#stat-blunder').text(stats.blunder);
 
-    $('#modal-title').text('Analysis Complete!');
+    $('#modal-title').text('analysis complete!');
     $('#progress-bar').hide();
     $('#stats-container').fadeIn();
 }
