@@ -10,26 +10,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
     <style>
         body {
+            background-image: linear-gradient(rgba(15, 15, 20, 0.7), rgba(15, 15, 20, 0.85)), url('assets/images/wallpaper.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             background-color: #222; color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; margin: 0; position: relative; overflow: hidden;
         }
-
-        /* 🌟 수정된 시작 화면: Lo-Fi 이미지 배경 및 반투명 어두운 필터 적용 */
         #start-screen {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            /* linear-gradient로 검은색 반투명 막을 씌워 로파이 느낌을 살리고 글씨 가독성을 높임 */
-            background-image: linear-gradient(rgba(15, 15, 20, 0.7), rgba(15, 15, 20, 0.85)), url('wallpaper.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background-color: rgba(10, 10, 15, 0.4);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             z-index: 9999;
             transition: opacity 0.6s ease, visibility 0.6s;
         }
-
         .start-content {
             text-align: center;
             animation: fadeIn 1.2s ease-out forwards;
@@ -43,7 +40,7 @@
             text-shadow: 0 0 10px rgba(135, 206, 235, 0.4), 0 0 20px rgba(135, 206, 235, 0.2);
         }
         .design-by {
-            color: rgba(255, 255, 255, 0.5); /* 텍스트를 약간 투명한 회색으로 변경 */
+            color: rgba(255, 255, 255, 0.5);
             font-size: 14px;
             letter-spacing: 1.5px;
             margin-bottom: 40px;
@@ -52,11 +49,11 @@
             display: flex; gap: 20px; justify-content: center;
         }
         .start-btn {
-            background: rgba(0, 0, 0, 0.3); /* 버튼 배경도 살짝 반투명하게 */
+            background: rgba(0, 0, 0, 0.3);
             padding: 12px 40px; font-size: 20px;
             font-weight: bold; letter-spacing: 2px; cursor: pointer;
             border-radius: 4px; transition: all 0.3s ease;
-            backdrop-filter: blur(2px); /* 배경 블러 효과 */
+            backdrop-filter: blur(2px);
         }
         .btn-white {
             color: white; border: 2px solid rgba(255, 255, 255, 0.8);
@@ -76,24 +73,26 @@
             0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
         }
-
         #main-game-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             opacity: 0; transition: opacity 0.8s ease;
         }
         #top-bar {
-            width: 400px; background-color: #232323; padding: 10px;
+            width: 400px; background-color: rgba(35, 35, 35, 0.85); padding: 10px;
             text-align: center; font-weight: bold; font-size: 14px;
             border-radius: 5px 5px 0 0; box-sizing: border-box; border-bottom: 1px solid #444;
+            backdrop-filter: blur(4px);
         }
         #opening-name {
-            width: 400px; background-color: #232323; color: #f0d9b5;
+            width: 400px; background-color: rgba(35, 35, 35, 0.85); color: #f0d9b5;
             text-align: center; font-size: 13px; font-style: italic;
             padding: 5px; box-sizing: border-box; border-bottom: 2px solid #444;
+            backdrop-filter: blur(4px);
         }
         #control-panel {
-            width: 400px; background-color: #2a2a2a; padding: 8px; box-sizing: border-box;
+            width: 400px; background-color: rgba(42, 42, 42, 0.85); padding: 8px; box-sizing: border-box;
             display: flex; justify-content: center;
+            backdrop-filter: blur(4px);
         }
         #resign-btn {
             background-color: #d9534f; color: white; border: none; padding: 8px 20px;
@@ -103,8 +102,8 @@
         #myBoard { width: 400px; position: relative; }
         #status {
             margin-top: 15px; font-size: 18px; color: skyblue; font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
         }
-
         .suggested-dot {
             width: 18px; height: 18px;
             background: rgba(255, 255, 255, 0.35);
@@ -122,7 +121,6 @@
         .highlight-selected {
             box-shadow: inset 0 0 0 4px skyblue !important;
         }
-
         #checkmate-banner {
             display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(17, 17, 17, 0.85); border: 2px solid skyblue;
@@ -156,6 +154,30 @@
         .btn-restart:hover { background-color: #4cae4c; }
         #progress-bar { width: 100%; background: #222; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
         #progress-fill { height: 10px; background: skyblue; width: 0%; transition: width 0.1s; }
+        
+        #music-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 10000;
+            backdrop-filter: blur(2px);
+            transition: all 0.3s ease;
+        }
+        #music-btn:hover {
+            background: white;
+            color: #111;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -203,7 +225,41 @@
         </div>
     </div>
 
+    <button id="music-btn" onclick="toggleMute()">MUSIC ON</button>
+
     <script>
+        var playlist = [
+            'assets/music/music1.mp3',
+            'assets/music/music2.mp3',
+            'assets/music/music3.mp3',
+            'assets/music/music4.mp3',
+            'assets/music/music5.mp3'
+        ];
+        var currentTrackIdx = 0;
+        var bgMusic = new Audio();
+        bgMusic.volume = 0.15;
+        bgMusic.loop = false;
+
+        function playNextTrack() {
+            bgMusic.src = playlist[currentTrackIdx];
+            bgMusic.play().catch(function(e) { console.log(e); });
+            currentTrackIdx = (currentTrackIdx + 1) % playlist.length;
+        }
+
+        bgMusic.onended = function() {
+            playNextTrack();
+        };
+
+        function toggleMute() {
+            bgMusic.muted = !bgMusic.muted;
+            var btn = document.getElementById('music-btn');
+            if (bgMusic.muted) {
+                btn.innerHTML = 'MUSIC OFF';
+            } else {
+                btn.innerHTML = 'MUSIC ON';
+            }
+        }
+
         function selectColor(color) {
             if (typeof isEngineReady === 'undefined' || !isEngineReady) {
                 alert("database loading.. please wait");
@@ -213,6 +269,8 @@
             var mainGame = document.getElementById('main-game-container');
             
             startScreen.style.opacity = '0';
+            playNextTrack();
+            
             setTimeout(function() {
                 startScreen.style.visibility = 'hidden';
                 mainGame.style.opacity = '1';
