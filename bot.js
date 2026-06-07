@@ -165,9 +165,37 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
 }
 
 function getBestMove() {
+    var historyStr = game.history().join(" ");
     var legalMoves = game.moves();
-    var bookMoves = [];
     
+    var ELITE_OPENINGS = {
+        "": ["e4", "d4", "c4", "Nf3"],
+        "e4": ["c5", "c6", "e5", "e6"],
+        "d4": ["Nf6", "d5", "e6"],
+        "c4": ["e5", "c5", "Nf6"],
+        "Nf3": ["Nf6", "d5", "c5"],
+        "e4 e5": ["Nf3", "Nc3", "Bc4"],
+        "e4 c5": ["Nf3", "Nc3", "c3"],
+        "e4 c6": ["d4", "Nc3"],
+        "e4 e6": ["d4"],
+        "d4 d5": ["c4", "Nf3", "Bf4"],
+        "d4 Nf6": ["c4", "Nf3", "g3"]
+    };
+
+    if (ELITE_OPENINGS[historyStr]) {
+        var prefMoves = ELITE_OPENINGS[historyStr];
+        var validPrefs = [];
+        for (var p = 0; p < prefMoves.length; p++) {
+            if (legalMoves.indexOf(prefMoves[p]) !== -1) {
+                validPrefs.push(prefMoves[p]);
+            }
+        }
+        if (validPrefs.length > 0) {
+            return validPrefs[Math.floor(Math.random() * validPrefs.length)];
+        }
+    }
+
+    var bookMoves = [];
     for (var k = 0; k < legalMoves.length; k++) {
         var tempMove = legalMoves[k];
         game.move(tempMove);
