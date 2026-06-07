@@ -170,16 +170,45 @@ function getBestMove() {
     
     var ELITE_OPENINGS = {
         "": ["e4", "d4", "c4", "Nf3"],
-        "e4": ["c5", "c6", "e5", "e6"],
+        "e4": ["c5", "e5", "e6", "c6"],
         "d4": ["Nf6", "d5", "e6"],
         "c4": ["e5", "c5", "Nf6"],
         "Nf3": ["Nf6", "d5", "c5"],
         "e4 e5": ["Nf3", "Nc3", "Bc4"],
-        "e4 c5": ["Nf3", "Nc3", "c3"],
-        "e4 c6": ["d4", "Nc3"],
+        "e4 c5": ["Nf3", "Nc3", "d6", "e6"],
         "e4 e6": ["d4"],
+        "e4 c6": ["d4"],
         "d4 d5": ["c4", "Nf3", "Bf4"],
-        "d4 Nf6": ["c4", "Nf3", "g3"]
+        "d4 Nf6": ["c4", "Nf3", "g3"],
+        "e4 e5 Nf3": ["Nc6", "Nf6", "d6"],
+        "e4 c5 Nf3": ["d6", "Nc6", "e6", "a6"],
+        "d4 d5 c4": ["e6", "c6", "dxc4"],
+        "d4 Nf6 c4": ["e6", "g6", "c5"],
+        "e4 e5 Nf3 Nc6": ["Bb5", "Bc4", "d4"],
+        "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"],
+        "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
+        "e4 e5 Nf3 Nc6 d4": ["exd4"],
+        "e4 e5 Nf3 Nf6": ["Nxe5", "d4", "Nc3"],
+        "e4 e5 Nf3 d6": ["d4", "Bc4"],
+        "e4 e5 Bc4": ["Nf6", "Nc6", "Bc5"],
+        "e4 e5 Nc3": ["Nf6", "Nc6", "Bc4"],
+        "e4 e6 d4 d5": ["Nc3", "Nd2", "exd5", "e5"],
+        "e4 c6 d4 d5": ["Nc3", "Nd2", "exd5", "e5"],
+        "d4 d5 c4 e6": ["Nc3", "Nf3", "Bf4"],
+        "d4 d5 c4 c6": ["Nf3", "Nc3", "e3"],
+        "d4 Nf6 c4 e6": ["Nf3", "Nc3", "g3"],
+        "d4 Nf6 c4 g6": ["Nc3", "Nf3"],
+        "e4 e5 Nf3 Nc6 Bb5 a6": ["Ba4", "Bxc6"],
+        "e4 e5 Nf3 Nc6 Bc4 Bc5": ["c3", "d3", "b4", "O-O"],
+        "e4 e5 Nf3 Nc6 Bc4 Nf6": ["d3", "Ng5", "d4"],
+        "e4 c5 Nf3 d6 d4 cxd4": ["Nxd4"],
+        "e4 c5 Nf3 Nc6 d4 cxd4": ["Nxd4"],
+        "e4 c5 Nf3 e6 d4 cxd4": ["Nxd4"],
+        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
+        "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
+        "e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nf6": ["Nc3"],
+        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": ["Be3", "Bg5", "Be2", "h3"],
+        "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6": ["Be3", "Be2", "f4"]
     };
 
     if (ELITE_OPENINGS[historyStr]) {
@@ -193,23 +222,6 @@ function getBestMove() {
         if (validPrefs.length > 0) {
             return validPrefs[Math.floor(Math.random() * validPrefs.length)];
         }
-    }
-
-    var bookMoves = [];
-    for (var k = 0; k < legalMoves.length; k++) {
-        var tempMove = legalMoves[k];
-        game.move(tempMove);
-        var nextFenFull = game.fen();
-        var nextFenPos = nextFenFull.split(' ')[0];
-        game.undo();
-        
-        if (ECO_DATA[nextFenFull] || ECO_DATA[nextFenPos]) {
-            bookMoves.push(tempMove);
-        }
-    }
-    
-    if (bookMoves.length > 0) {
-        return bookMoves[Math.floor(Math.random() * bookMoves.length)];
     }
 
     var isWhite = (game.turn() === 'w');
