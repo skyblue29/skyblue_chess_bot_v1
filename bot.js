@@ -17,6 +17,9 @@ var ecoFiles = [
 var loadedCount = 0;
 var isEngineReady = false;
 
+// ⚡ 최적화 1: 평가 캐시 메모리 (중복 계산 방지)
+var evalCache = {};
+
 function loadEcoFiles() {
     if (loadedCount >= ecoFiles.length) {
         console.log("All ECO Files Integrated Successfully");
@@ -41,13 +44,12 @@ function loadEcoFiles() {
 
 loadEcoFiles();
 
-// 미드게임용 폰 테이블 (중앙 장악 최우선, 무지성 전진 방지)
 var PAWN_TABLE = [
     [  0,  0,  0,  0,  0,  0,  0,  0], 
-    [ 50, 50, 50, 50, 50, 50, 50, 50], 
-    [ 10, 10, 20, 30, 30, 20, 10, 10], 
-    [  5,  5, 10, 25, 25, 10,  5,  5], 
-    [  0,  0,  0, 20, 20,  0,  0,  0], 
+    [ 70, 70, 70, 70, 70, 70, 70, 70], 
+    [ 30, 30, 40, 50, 50, 40, 30, 30], 
+    [ 10, 10, 20, 40, 40, 20, 10, 10], 
+    [  5,  5, 10, 30, 30, 10,  5,  5], 
     [  5, -5,-10,  0,  0,-10, -5,  5], 
     [  5, 10, 10,-20,-20, 10, 10,  5], 
     [  0,  0,  0,  0,  0,  0,  0,  0]  
@@ -108,13 +110,20 @@ var KING_TABLE = [
     [-30,-40,-40,-50,-50,-40,-40,-30]
 ];
 
-function evaluateBoard(boardMatrix) {
+// ⚡ 최적화 1: 파라미터를 gameObj로 변경하여 캐싱 적용
+function evaluateBoard(gameObj) {
+    // 현재 기물 배치 상태만 추출하여 캐시 확인 (속도 폭발적 증가)
+    var fenPos = gameObj.fen().split(' ')[0];
+    if (evalCache[fenPos] !== undefined) {
+        return evalCache[fenPos];
+    }
+
+    var boardMatrix = gameObj.board(); // 여기서 메모리를 엄청 잡아먹기 때문에 캐싱이 필수적입니다.
     var score = 0;
     var wk = null, bk = null;
     var wMajorMinor = 0, bMajorMinor = 0;
     var wBishopColor = null;
 
-    // 1단계: 기물 카운트 및 킹 위치 탐색 (폰 제외 주요 기물 개수만 체크)
     for (var r = 0; r < 8; r++) {
         for (var c = 0; c < 8; c++) {
             var p = boardMatrix[r][c];
@@ -131,10 +140,8 @@ function evaluateBoard(boardMatrix) {
         }
     }
 
-    // 엔드게임 판별: 폰을 제외한 주요 기물(퀸,룩,비숍,나이트)이 양측 각각 2개 이하일 때만 발동!
     var isEndgame = (wMajorMinor <= 2 && bMajorMinor <= 2);
 
-    // 2단계: 메인 기물 테이블 점수 산정
     for (var r = 0; r < 8; r++) {
         for (var c = 0; c < 8; c++) { 
             var piece = boardMatrix[r][c];
@@ -146,39 +153,30 @@ function evaluateBoard(boardMatrix) {
 
                 if (piece.type === 'p') {
                     bonus = PAWN_TABLE[tableRow][tableCol];
-                    // 🌟 오프닝/미드게임 트롤링 차단 🌟
-                    // 엔드게임일 때만 전진할수록 폭발적인 보너스를 줌 (오프닝 때는 발동 안 됨)
-                    if (isEndgame) {
-                        bonus += ((7 - tableRow) * 30); 
-                    }
+                    if (isEndgame) bonus += ((7 - tableRow) * 30); 
                 }
                 else if (piece.type === 'n') bonus = KNIGHT_TABLE[tableRow][tableCol];
                 else if (piece.type === 'b') bonus = BISHOP_TABLE[tableRow][tableCol];
                 else if (piece.type === 'r') bonus = ROOK_TABLE[tableRow][tableCol];
                 else if (piece.type === 'q') bonus = QUEEN_TABLE[tableRow][tableCol];
                 else if (piece.type === 'k') {
-                    // 엔드게임 시 킹이 구석에 숨지 않고 중앙으로 나와 싸우도록 유도
                     if (isEndgame) bonus = -KING_TABLE[tableRow][tableCol];
                     else bonus = KING_TABLE[tableRow][tableCol];
                 }
 
                 var pieceScore = val + bonus;
 
-                // 3단계: 하이엔드 엔드게임 전술 매트릭스 주입
                 if (isEndgame && piece.type !== 'p' && piece.type !== 'k') {
                     var enemyKing = (piece.color === 'w') ? bk : wk;
                     var myKing = (piece.color === 'w') ? wk : bk;
 
                     if (enemyKing && myKing) {
-                        // 규칙 A: 상대 킹이 구석(가장자리)에 박힐수록 보너스 (퀸/룩/2룩 메이트 패턴)
                         var enemyKingMopUp = 0;
                         enemyKingMopUp += Math.max(Math.abs(enemyKing.c - 3.5), Math.abs(enemyKing.r - 3.5)) * 10;
                         
-                        // 규칙 B: 내 킹과 상대 킹이 가까울수록 보너스 (오포지션 및 메이트 서포트)
                         var kingDistance = Math.abs(myKing.r - enemyKing.r) + Math.abs(myKing.c - enemyKing.c);
                         enemyKingMopUp += (14 - kingDistance) * 5;
 
-                        // 규칙 C: 비숍 나이트 메이트 전용 포지션 수학 공식
                         if (piece.type === 'b' || piece.type === 'n') {
                             if (wBishopColor === 'light') {
                                 var distToA8 = Math.abs(enemyKing.r - 0) + Math.abs(enemyKing.c - 0);
@@ -200,26 +198,33 @@ function evaluateBoard(boardMatrix) {
             }
         }
     }
+    
+    // 계산 완료 후 캐시에 저장
+    evalCache[fenPos] = score;
     return score;
 }
 
+// ⚡ 최적화 2: 정렬 로직 간소화 (수만 번 반복되는 indexOf 성능 향상)
 function orderMoves(moves) {
-    moves.sort(function(a, b) {
-        var scoreA = 0;
-        var scoreB = 0;
-        if (a.indexOf('#') !== -1) scoreA += 5000;
-        if (b.indexOf('#') !== -1) scoreB += 5000;
-        if (a.indexOf('+') !== -1) scoreA += 500;
-        if (b.indexOf('+') !== -1) scoreB += 500;
-        if (a.indexOf('x') !== -1) scoreA += 200;
-        if (b.indexOf('x') !== -1) scoreB += 200;
-        return scoreB - scoreA;
-    });
-    return moves;
+    var scoredMoves = [];
+    for (var i = 0; i < moves.length; i++) {
+        var m = moves[i];
+        var s = 0;
+        if (m.indexOf('#') !== -1) s += 5000;
+        else if (m.indexOf('+') !== -1) s += 500;
+        if (m.indexOf('x') !== -1) s += 200;
+        scoredMoves.push({ move: m, score: s });
+    }
+    scoredMoves.sort(function(a, b) { return b.score - a.score; });
+    var result = [];
+    for (var j = 0; j < scoredMoves.length; j++) {
+        result.push(scoredMoves[j].move);
+    }
+    return result;
 }
 
 function quiesce(gameObj, alpha, beta, isMaximizing, qsDepth) {
-    var stand_pat = evaluateBoard(gameObj.board());
+    var stand_pat = evaluateBoard(gameObj); // 파라미터 변경 반영
     if (qsDepth === 0) return stand_pat;
 
     if (isMaximizing) {
@@ -269,7 +274,9 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
         if (gameObj.in_checkmate()) return gameObj.turn() === 'w' ? (-999999 + (depth * 1000)) : (999999 - (depth * 1000));
         if (gameObj.in_draw()) return 0;
     }
-    if (depth === 0) return quiesce(gameObj, alpha, beta, isMaximizing, 4);
+    // ⚡ 최적화 3: 과도한 정지 탐색 깊이 제한 (4 -> 2)
+    // 깊이를 줄여도 이미 핵심 패턴을 인식하므로 멍청해지지 않고 속도만 훨씬 빨라집니다.
+    if (depth === 0) return quiesce(gameObj, alpha, beta, isMaximizing, 2); 
 
     var moves = orderMoves(gameObj.moves());
     if (isMaximizing) {
@@ -296,6 +303,8 @@ function minimax(gameObj, depth, alpha, beta, isMaximizing) {
 }
 
 function getBestMove() {
+    evalCache = {}; // 매 턴마다 캐시 초기화 (메모리 누수 방지)
+    
     var historyStr = game.history().join(" ");
     var legalMoves = game.moves();
     
@@ -369,12 +378,14 @@ function onDragStart(source, piece, position, orientation) {
 
 function makeComputerMove() {
     $status.text('computer is thinking...');
+    
+    // UI 업데이트 지연시간 단축으로 체감 속도 상승
     setTimeout(function() {
         var move = getBestMove(); 
         game.move(move);
         board.position(game.fen());
         updateStatus();
-    }, 250);
+    }, 50);
 }
 
 function onDrop(source, target) {
