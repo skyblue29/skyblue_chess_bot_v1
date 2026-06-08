@@ -65,7 +65,11 @@ window.handleDevMode = function() {
 
 function startTestPosition() {
     playerColor = 'w';
-    var testFen = '8/4P3/8/8/8/8/4K3/k7 w - - 0 1';
+    
+    // 🌟 수정됨: 흑(Black)에게 h7 폰을 하나 쥐어주어, 
+    // 나이트/비숍 승진 시 발생하는 '기물 부족 무승부'를 원천 차단합니다.
+    var testFen = 'k7/4P2p/8/8/8/8/8/4K3 w - - 0 1';
+    
     game.load(testFen);
     board.orientation('white');
     board.position(testFen);
@@ -137,14 +141,59 @@ function startGameWithColor(color) {
     if (color === 'b') makeComputerMove();
 }
 
+function getEliteOpeningMove() {
+    var historyStr = game.history().join(" ");
+    var legalMoves = game.moves();
+    var ELITE_OPENINGS = {
+        "": ["e4", "d4", "c4", "Nf3"], "e4": ["c5", "e5", "e6", "c6"], "d4": ["Nf6", "d5", "e6"],
+        "c4": ["e5", "c5", "Nf6"], "Nf3": ["Nf6", "d5", "c5"], "e4 e6": ["d4"], "e4 e6 d4": ["d5"],
+        "e4 e6 d4 d5": ["Nc3", "Nd2", "e5"], "e4 e6 d4 d5 Nc3": ["Nf6", "Bb4"], "e4 e6 d4 d5 Nc3 Nf6": ["Bg5", "e5"],
+        "e4 c5": ["Nf3"], "e4 c5 Nf3": ["d6", "Nc6", "e6"], "e4 c5 Nf3 d6": ["d4"], "e4 c5 Nf3 d6 d4": ["cxd4"],
+        "e4 c5 Nf3 d6 d4 cxd4": ["Nxd4"], "e4 c5 Nf3 d6 d4 Nxd4": ["Nf6"], "e4 c5 Nf3 d6 d4 Nxd4 Nf6": ["Nc3"],
+        "e4 c6": ["d4"], "e4 c6 d4": ["d5"], "e4 c6 d4 d5": ["Nc3", "exd5", "e5"], "e4 c6 d4 d5 Nc3": ["dxe4"],
+        "e4 c6 d4 d5 Nc3 dxe4": ["Nxe4"], "e4 e5": ["Nf3", "Nc3", "Bc4"], "e4 e5 Nf3": ["Nc6", "Nf6"],
+        "e4 e5 Nf3 Nc6": ["Bb5", "Bc4"], "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"], "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
+        "d4 d5": ["c4", "Nf3", "Bf4"], "d4 d5 c4": ["e6", "c6", "dxc4"], "d4 d5 c4 e6": ["Nc3", "Nf3"], "d4 Nf6 c4": ["e6", "g6"]
+    };
+
+    if (ELITE_OPENINGS[historyStr]) {
+        var prefMoves = ELITE_OPENINGS[historyStr];
+        var validPrefs = prefMoves.filter(function(m) { return legalMoves.indexOf(m) !== -1; });
+        if (validPrefs.length > 0) return validPrefs[Math.floor(Math.random() * validPrefs.length)];
+    }
+
+    var bookMoves = [];
+    for (var k = 0; k < legalMoves.length; k++) {
+        var tempMove = legalMoves[k];
+        game.move(tempMove);
+        var nextFenFull = game.fen();
+        var nextFenPos = nextFenFull.split(' ')[0];
+        game.undo();
+        if (ECO_DATA[nextFenFull] || ECO_DATA[nextFenPos]) bookMoves.push(tempMove);
+    }
+    if (bookMoves.length > 0) return bookMoves[Math.floor(Math.random() * bookMoves.length)];
+    
+    return null; 
+}
+
 function makeComputerMove() {
     $status.text('computer is thinking...');
-    engineWorker.postMessage({
-        fen: game.fen(),
-        isWhite: (game.turn() === 'w'),
-        moveHistoryLength: game.history().length,
-        legalMoves: game.moves()
-    });
+    
+    var openingMove = getEliteOpeningMove();
+    if (openingMove) {
+        setTimeout(function() {
+            game.move(openingMove);
+            board.position(game.fen());
+            updateStatus();
+        }, 300);
+    } else {
+        engineWorker.postMessage({
+            fen: game.fen(),
+            isWhite: (game.turn() === 'w'),
+            moveHistoryLength: game.history().length,
+            legalMoves: game.moves()
+        });
+    }
 }
 
 engineWorker.onmessage = function(e) {
