@@ -9,6 +9,7 @@ var loadedCount = 0;
 var isEngineReady = false;
 var playerColor = 'w';
 var selectedSquare = null;
+var pendingPromotionMove = null;
 
 var engineWorker = new Worker('worker.js');
 
@@ -31,6 +32,24 @@ function loadEcoFiles() {
 }
 loadEcoFiles();
 
+// 🌟 추가됨: HTML에서 호출하는 진영 선택 함수
+window.selectColor = function(color) {
+    if (!isEngineReady) {
+        alert("database loading.. please wait");
+        return;
+    }
+    var startScreen = document.getElementById('start-screen');
+    var mainGame = document.getElementById('main-game-container');
+    
+    startScreen.style.opacity = '0';
+    
+    setTimeout(function() {
+        startScreen.style.visibility = 'hidden';
+        mainGame.style.opacity = '1';
+        startGameWithColor(color);
+    }, 600);
+};
+
 function removeGreyDots() {
     $('#myBoard .suggested-dot, #myBoard .suggested-ring').remove();
     $('#myBoard div[class*="square-"]').removeClass('highlight-selected');
@@ -38,17 +57,12 @@ function removeGreyDots() {
 
 function showGreyDots(square) {
     removeGreyDots();
-    
-    // 클릭한 내 기물에 하이라이트 표시
     $('#myBoard .square-' + square).addClass('highlight-selected');
     
-    // 이동 가능한 목적지 목록 추출
     var moves = game.moves({ square: square, verbose: true });
     for (var i = 0; i < moves.length; i++) {
         var targetSquare = moves[i].to;
         var $targetEl = $('#myBoard .square-' + targetSquare);
-        
-        // 상대방 기물을 잡을 수 있는 위치면 원형 링(ring), 빈 칸이면 꽉 찬 원(dot)
         if (game.get(targetSquare)) {
             $targetEl.append('<div class="suggested-ring"></div>');
         } else {
@@ -57,22 +71,43 @@ function showGreyDots(square) {
     }
 }
 
+function showPromotionMenu(source, target) {
+    pendingPromotionMove = { from: source, to: target };
+    var c = playerColor;
+    var baseUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/';
+    
+    $('#promo-img-q').attr('src', baseUrl + c + 'Q.png');
+    $('#promo-img-r').attr('src', baseUrl + c + 'R.png');
+    $('#promo-img-b').attr('src', baseUrl + c + 'B.png');
+    $('#promo-img-n').attr('src', baseUrl + c + 'N.png');
+    
+    $('#promotion-modal').fadeIn(200);
+}
+
+window.executePromotion = function(promoPiece) {
+    $('#promotion-modal').fadeOut(200);
+    if (pendingPromotionMove) {
+        game.move({ from: pendingPromotionMove.from, to: pendingPromotionMove.to, promotion: promoPiece });
+        board.position(game.fen());
+        removeGreyDots();
+        selectedSquare = null;
+        pendingPromotionMove = null;
+        updateStatus();
+        if (!game.game_over()) makeComputerMove();
+    }
+};
+
 function startGameWithColor(color) {
     playerColor = color;
     game.reset();
-    
     board.orientation(color === 'b' ? 'black' : 'white');
     board.position('start');
-    
     removeGreyDots();
     selectedSquare = null;
-    
+    pendingPromotionMove = null;
     $('#history').text("Game Start");
     $('#opening-name').text("Starting Position");
-    
-    if (color === 'b') {
-        makeComputerMove();
-    }
+    if (color === 'b') makeComputerMove();
 }
 
 function getEliteOpeningMove() {
@@ -106,13 +141,11 @@ function getEliteOpeningMove() {
         if (ECO_DATA[nextFenFull] || ECO_DATA[nextFenPos]) bookMoves.push(tempMove);
     }
     if (bookMoves.length > 0) return bookMoves[Math.floor(Math.random() * bookMoves.length)];
-    
     return null; 
 }
 
 function makeComputerMove() {
     $status.text('computer is thinking...');
-    
     var openingMove = getEliteOpeningMove();
     if (openingMove) {
         setTimeout(function() {
@@ -141,35 +174,45 @@ function onDragStart(source, piece) {
     if (game.game_over()) return false;
     if (piece.charAt(0) !== playerColor) return false;
     if (!isEngineReady) return false;
-    
-    // 드래그를 시작하면 즉시 기존 가이드 점을 지우고 현재 드래그 중인 기물의 가이드 점을 보여줍니다.
     selectedSquare = source;
     showGreyDots(source);
 }
 
 function onDrop(source, target) {
-    var move = game.move({ from: source, to: target, promotion: 'q' });
-    if (move === null) {
+    var moves = game.moves({ verbose: true });
+    var moveObj = null;
+    
+    for (var i = 0; i < moves.length; i++) {
+        if (moves[i].from === source && moves[i].to === target) {
+            moveObj = moves[i];
+            break;
+        }
+    }
+    
+    if (!moveObj) {
         removeGreyDots();
         selectedSquare = null;
         return 'snapback';
     }
-    
+
+    if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
+        showPromotionMenu(source, target);
+        return 'snapback';
+    }
+
+    game.move({ from: source, to: target, promotion: 'q' });
     updateStatus();
     removeGreyDots();
     selectedSquare = null;
-    
     if (!game.game_over()) makeComputerMove();
 }
 
 function onSnapEnd() { board.position(game.fen()); }
 
-// 🌟 클릭 이동 로직 완전 고도화: 어떤 브라우저에서도 정확하게 좌표를 잡아냅니다.
 $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
     if (!isEngineReady || game.game_over()) return;
-    if (game.turn() !== playerColor) return; // 봇이 생각 중일 때는 클릭 방지
+    if (game.turn() !== playerColor) return; 
 
-    // 1. 클릭한 칸의 이름(예: e4, d5)을 클래스 이름에서 정확하게 파싱해냅니다.
     var className = $(this).attr('class');
     var match = className.match(/square-([a-h][1-8])/);
     if (!match) return;
@@ -177,31 +220,32 @@ $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
     var clickedSquare = match[1];
     var pieceOnClickedSquare = game.get(clickedSquare);
     
-    // 2. 이미 기물이 선택된 상태에서 목적지를 클릭했을 때
     if (selectedSquare) {
         var moves = game.moves({ square: selectedSquare, verbose: true });
-        var isValidMove = false;
+        var moveObj = null;
         
         for (var i = 0; i < moves.length; i++) {
             if (moves[i].to === clickedSquare) {
-                isValidMove = true;
+                moveObj = moves[i];
                 break;
             }
         }
         
-        // 이동 가능한 곳이면 즉각 이동
-        if (isValidMove) {
+        if (moveObj) {
+            if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
+                showPromotionMenu(selectedSquare, clickedSquare);
+                return;
+            }
+            
             game.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
-            board.position(game.fen()); // 화면 강제 갱신
+            board.position(game.fen());
             removeGreyDots();
             selectedSquare = null;
             updateStatus();
-            
             if (!game.game_over()) makeComputerMove();
             return;
         }
         
-        // 만약 이동할 수 없는 빈 칸을 클릭했다면 선택을 취소합니다.
         if (!pieceOnClickedSquare || pieceOnClickedSquare.color !== playerColor) {
             removeGreyDots();
             selectedSquare = null;
@@ -209,9 +253,7 @@ $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
         }
     }
     
-    // 3. 내 기물을 새롭게 클릭했을 때
     if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
-        // 이미 선택된 기물을 또 누르면 선택 취소
         if (selectedSquare === clickedSquare) {
             removeGreyDots();
             selectedSquare = null;
@@ -224,7 +266,6 @@ $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
 
 function updateStatus() {
     if (!isEngineReady) return;
-    
     var moves = game.history();
     var historyStr = "";
     for (var i=0; i<moves.length; i++) {
@@ -276,21 +317,17 @@ async function runAnalysis() {
         var isWhite = (i % 2 === 0);
         var moveStr = history[i];
         var countThisMove = isWhite; 
-
         if (i < 8) {
             if (countThisMove) stats.book++;
             tempGame.move(moveStr);
         } else {
             tempGame.move(moveStr);
-            if (countThisMove) {
-                stats.good++;
-            }
+            if (countThisMove) stats.good++;
         }
         var percent = Math.round(((i + 1) / history.length) * 100);
         $('#progress-fill').css('width', percent + '%');
         await new Promise(function(resolve) { setTimeout(resolve, 10); }); 
     }
-
     $('#stat-brilliant').text(stats.brilliant);
     $('#stat-great').text(stats.great);
     $('#stat-best').text(stats.best);
@@ -301,7 +338,6 @@ async function runAnalysis() {
     $('#stat-mistake').text(stats.mistake);
     $('#stat-miss').text(stats.miss);
     $('#stat-blunder').text(stats.blunder);
-
     $('#modal-title').text('analysis complete!');
     $('#progress-bar').hide();
     $('#stats-container').fadeIn();
