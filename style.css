@@ -51,20 +51,22 @@ body {
     backdrop-filter: blur(2px);
 }
 
-.btn-white {
-    color: white; border: 2px solid rgba(255, 255, 255, 0.8);
-}
-.btn-white:hover {
-    background: white; color: #111;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.6); transform: scale(1.05);
-}
+.btn-white { color: white; border: 2px solid rgba(255, 255, 255, 0.8); }
+.btn-white:hover { background: white; color: #111; box-shadow: 0 0 20px rgba(255, 255, 255, 0.6); transform: scale(1.05); }
 
-.btn-black {
-    color: #ccc; border: 2px solid rgba(170, 170, 170, 0.6); 
+.btn-black { color: #ccc; border: 2px solid rgba(170, 170, 170, 0.6); }
+.btn-black:hover { color: white; border-color: #fff; background: rgba(50, 50, 50, 0.8); box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transform: scale(1.05); }
+
+.dev-tools-btn {
+    position: absolute; bottom: 30px; left: 30px;
+    background: transparent; color: rgba(135, 206, 235, 0.4);
+    border: 1px solid rgba(135, 206, 235, 0.2);
+    padding: 8px 15px; font-size: 12px; cursor: pointer;
+    border-radius: 4px; letter-spacing: 1px; transition: all 0.3s ease;
 }
-.btn-black:hover {
-    color: white; border-color: #fff; background: rgba(50, 50, 50, 0.8);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transform: scale(1.05);
+.dev-tools-btn:hover {
+    color: skyblue; border-color: skyblue;
+    box-shadow: 0 0 10px rgba(135, 206, 235, 0.3);
 }
 
 @keyframes fadeIn {
@@ -93,8 +95,7 @@ body {
 
 #control-panel {
     width: 400px; background-color: rgba(42, 42, 42, 0.85); padding: 8px; box-sizing: border-box;
-    display: flex; justify-content: center;
-    backdrop-filter: blur(4px);
+    display: flex; justify-content: center; backdrop-filter: blur(4px);
 }
 
 #resign-btn {
@@ -111,24 +112,18 @@ body {
 }
 
 .suggested-dot {
-    width: 18px; height: 18px;
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 50%; position: absolute;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 18px; height: 18px; background: rgba(255, 255, 255, 0.35);
+    border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     pointer-events: none; z-index: 500;
 }
 
 .suggested-ring {
-    width: 42px; height: 42px;
-    border: 5px solid rgba(255, 255, 255, 0.35);
-    border-radius: 50%; position: absolute;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 42px; height: 42px; border: 5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     pointer-events: none; z-index: 500; box-sizing: border-box;
 }
 
-.highlight-selected {
-    box-shadow: inset 0 0 0 4px skyblue !important;
-}
+.highlight-selected { box-shadow: inset 0 0 0 4px skyblue !important; }
 
 #checkmate-banner {
     display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -140,10 +135,7 @@ body {
     backdrop-filter: blur(4px);
 }
 
-.winner-text {
-    color: skyblue; font-size: 26px; font-weight: bold; display: block; margin-top: 5px;
-    text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
-}
+.winner-text { color: skyblue; font-size: 26px; font-weight: bold; display: block; margin-top: 5px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); }
 
 #promotion-modal {
     display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -153,30 +145,16 @@ body {
     backdrop-filter: blur(4px); text-align: center;
 }
 
-.promo-title {
-    color: skyblue; font-size: 20px; font-weight: bold; margin-bottom: 20px;
-    letter-spacing: 2px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
-}
+.promo-title { color: skyblue; font-size: 20px; font-weight: bold; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); }
 
-.promo-pieces {
-    display: flex; gap: 15px; justify-content: center;
-}
+.promo-pieces { display: flex; gap: 15px; justify-content: center; }
 
 .promo-piece {
-    width: 70px; height: 70px; cursor: pointer;
-    border-radius: 8px; transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 70px; height: 70px; cursor: pointer; border-radius: 8px; transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex; align-items: center; justify-content: center;
 }
-
-.promo-piece:hover {
-    background: rgba(135, 206, 235, 0.2);
-    border-color: skyblue;
-    box-shadow: 0 0 15px rgba(135, 206, 235, 0.6);
-    transform: scale(1.1);
-}
-
+.promo-piece:hover { background: rgba(135, 206, 235, 0.2); border-color: skyblue; box-shadow: 0 0 15px rgba(135, 206, 235, 0.6); transform: scale(1.1); }
 .promo-piece img { width: 80%; height: 80%; }
 
 #analysis-modal {
@@ -184,23 +162,11 @@ body {
     background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
 }
 
-.modal-content {
-    background: #333; padding: 30px; border-radius: 10px; width: 350px;
-    text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-}
-
+.modal-content { background: #333; padding: 30px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
 .modal-content h2 { margin-top: 0; color: #f0d9b5; }
-
-.stat-row {
-    display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; font-weight: bold;
-}
+.stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; font-weight: bold; }
 .stat-row:last-child { border-bottom: none; }
-
-.btn-restart {
-    margin-top: 20px; background-color: #5cb85c; color: white; border: none;
-    padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;
-}
+.btn-restart { margin-top: 20px; background-color: #5cb85c; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
 .btn-restart:hover { background-color: #4cae4c; }
-
 #progress-bar { width: 100%; background: #222; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
 #progress-fill { height: 10px; background: skyblue; width: 0%; transition: width 0.1s; }
