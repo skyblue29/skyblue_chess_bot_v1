@@ -32,7 +32,6 @@ function loadEcoFiles() {
 }
 loadEcoFiles();
 
-// 🌟 추가됨: HTML에서 호출하는 진영 선택 함수
 window.selectColor = function(color) {
     if (!isEngineReady) {
         alert("database loading.. please wait");
@@ -40,15 +39,47 @@ window.selectColor = function(color) {
     }
     var startScreen = document.getElementById('start-screen');
     var mainGame = document.getElementById('main-game-container');
-    
     startScreen.style.opacity = '0';
-    
     setTimeout(function() {
         startScreen.style.visibility = 'hidden';
         mainGame.style.opacity = '1';
         startGameWithColor(color);
     }, 600);
 };
+
+// 🌟 Dev Mode 핸들러 (비밀번호 1234a)
+window.handleDevMode = function() {
+    var pass = prompt("Enter Developer Password:");
+    if (pass === "1234a") {
+        var startScreen = document.getElementById('start-screen');
+        var mainGame = document.getElementById('main-game-container');
+        startScreen.style.opacity = '0';
+        setTimeout(function() {
+            startScreen.style.visibility = 'hidden';
+            mainGame.style.opacity = '1';
+            startTestPosition();
+        }, 600);
+    } else {
+        alert("Access Denied.");
+    }
+};
+
+// 🌟 테스트 전용 FEN 설정 (Pawn on 7th rank)
+function startTestPosition() {
+    playerColor = 'w';
+    // White King e2, White Pawn e7 / Black King a1
+    var testFen = '8/4P3/8/8/8/8/4K3/k7 w - - 0 1';
+    game.load(testFen);
+    board.orientation('white');
+    board.position(testFen);
+    
+    removeGreyDots();
+    selectedSquare = null;
+    pendingPromotionMove = null;
+    $('#history').text("Dev Mode: Promotion Test");
+    $('#opening-name').text("Test Position Loaded");
+    updateStatus();
+}
 
 function removeGreyDots() {
     $('#myBoard .suggested-dot, #myBoard .suggested-ring').remove();
@@ -58,7 +89,6 @@ function removeGreyDots() {
 function showGreyDots(square) {
     removeGreyDots();
     $('#myBoard .square-' + square).addClass('highlight-selected');
-    
     var moves = game.moves({ square: square, verbose: true });
     for (var i = 0; i < moves.length; i++) {
         var targetSquare = moves[i].to;
@@ -75,12 +105,10 @@ function showPromotionMenu(source, target) {
     pendingPromotionMove = { from: source, to: target };
     var c = playerColor;
     var baseUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/';
-    
     $('#promo-img-q').attr('src', baseUrl + c + 'Q.png');
     $('#promo-img-r').attr('src', baseUrl + c + 'R.png');
     $('#promo-img-b').attr('src', baseUrl + c + 'B.png');
     $('#promo-img-n').attr('src', baseUrl + c + 'N.png');
-    
     $('#promotion-modal').fadeIn(200);
 }
 
@@ -110,57 +138,14 @@ function startGameWithColor(color) {
     if (color === 'b') makeComputerMove();
 }
 
-function getEliteOpeningMove() {
-    var historyStr = game.history().join(" ");
-    var legalMoves = game.moves();
-    var ELITE_OPENINGS = {
-        "": ["e4", "d4", "c4", "Nf3"], "e4": ["c5", "e5", "e6", "c6"], "d4": ["Nf6", "d5", "e6"],
-        "c4": ["e5", "c5", "Nf6"], "Nf3": ["Nf6", "d5", "c5"], "e4 e6": ["d4"], "e4 e6 d4": ["d5"],
-        "e4 e6 d4 d5": ["Nc3", "Nd2", "e5"], "e4 e6 d4 d5 Nc3": ["Nf6", "Bb4"], "e4 e6 d4 d5 Nc3 Nf6": ["Bg5", "e5"],
-        "e4 c5": ["Nf3"], "e4 c5 Nf3": ["d6", "Nc6", "e6"], "e4 c5 Nf3 d6": ["d4"], "e4 c5 Nf3 d6 d4": ["cxd4"],
-        "e4 c5 Nf3 d6 d4 cxd4": ["Nxd4"], "e4 c5 Nf3 d6 d4 Nxd4": ["Nf6"], "e4 c5 Nf3 d6 d4 Nxd4 Nf6": ["Nc3"],
-        "e4 c6": ["d4"], "e4 c6 d4": ["d5"], "e4 c6 d4 d5": ["Nc3", "exd5", "e5"], "e4 c6 d4 d5 Nc3": ["dxe4"],
-        "e4 c6 d4 d5 Nc3 dxe4": ["Nxe4"], "e4 e5": ["Nf3", "Nc3", "Bc4"], "e4 e5 Nf3": ["Nc6", "Nf6"],
-        "e4 e5 Nf3 Nc6": ["Bb5", "Bc4"], "e4 e5 Nf3 Nc6 Bb5": ["a6", "Nf6"], "e4 e5 Nf3 Nc6 Bc4": ["Bc5", "Nf6"],
-        "d4 d5": ["c4", "Nf3", "Bf4"], "d4 d5 c4": ["e6", "c6", "dxc4"], "d4 d5 c4 e6": ["Nc3", "Nf3"], "d4 Nf6 c4": ["e6", "g6"]
-    };
-
-    if (ELITE_OPENINGS[historyStr]) {
-        var prefMoves = ELITE_OPENINGS[historyStr];
-        var validPrefs = prefMoves.filter(function(m) { return legalMoves.indexOf(m) !== -1; });
-        if (validPrefs.length > 0) return validPrefs[Math.floor(Math.random() * validPrefs.length)];
-    }
-
-    var bookMoves = [];
-    for (var k = 0; k < legalMoves.length; k++) {
-        var tempMove = legalMoves[k];
-        game.move(tempMove);
-        var nextFenFull = game.fen();
-        var nextFenPos = nextFenFull.split(' ')[0];
-        game.undo();
-        if (ECO_DATA[nextFenFull] || ECO_DATA[nextFenPos]) bookMoves.push(tempMove);
-    }
-    if (bookMoves.length > 0) return bookMoves[Math.floor(Math.random() * bookMoves.length)];
-    return null; 
-}
-
 function makeComputerMove() {
     $status.text('computer is thinking...');
-    var openingMove = getEliteOpeningMove();
-    if (openingMove) {
-        setTimeout(function() {
-            game.move(openingMove);
-            board.position(game.fen());
-            updateStatus();
-        }, 300);
-    } else {
-        engineWorker.postMessage({
-            fen: game.fen(),
-            isWhite: (game.turn() === 'w'),
-            moveHistoryLength: game.history().length,
-            legalMoves: game.moves()
-        });
-    }
+    engineWorker.postMessage({
+        fen: game.fen(),
+        isWhite: (game.turn() === 'w'),
+        moveHistoryLength: game.history().length,
+        legalMoves: game.moves()
+    });
 }
 
 engineWorker.onmessage = function(e) {
@@ -181,25 +166,21 @@ function onDragStart(source, piece) {
 function onDrop(source, target) {
     var moves = game.moves({ verbose: true });
     var moveObj = null;
-    
     for (var i = 0; i < moves.length; i++) {
         if (moves[i].from === source && moves[i].to === target) {
             moveObj = moves[i];
             break;
         }
     }
-    
     if (!moveObj) {
         removeGreyDots();
         selectedSquare = null;
         return 'snapback';
     }
-
     if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
         showPromotionMenu(source, target);
         return 'snapback';
     }
-
     game.move({ from: source, to: target, promotion: 'q' });
     updateStatus();
     removeGreyDots();
@@ -212,31 +193,25 @@ function onSnapEnd() { board.position(game.fen()); }
 $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
     if (!isEngineReady || game.game_over()) return;
     if (game.turn() !== playerColor) return; 
-
     var className = $(this).attr('class');
     var match = className.match(/square-([a-h][1-8])/);
     if (!match) return;
-    
     var clickedSquare = match[1];
     var pieceOnClickedSquare = game.get(clickedSquare);
-    
     if (selectedSquare) {
         var moves = game.moves({ square: selectedSquare, verbose: true });
         var moveObj = null;
-        
         for (var i = 0; i < moves.length; i++) {
             if (moves[i].to === clickedSquare) {
                 moveObj = moves[i];
                 break;
             }
         }
-        
         if (moveObj) {
             if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
                 showPromotionMenu(selectedSquare, clickedSquare);
                 return;
             }
-            
             game.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
             board.position(game.fen());
             removeGreyDots();
@@ -245,14 +220,12 @@ $(document).on('click', '#myBoard div[class*="square-"]', function(event) {
             if (!game.game_over()) makeComputerMove();
             return;
         }
-        
         if (!pieceOnClickedSquare || pieceOnClickedSquare.color !== playerColor) {
             removeGreyDots();
             selectedSquare = null;
             return;
         }
     }
-    
     if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
         if (selectedSquare === clickedSquare) {
             removeGreyDots();
@@ -274,11 +247,9 @@ function updateStatus() {
     }
     $history.text(historyStr || "Game Start");
     $status.text('skyblue bot v1');
-
     var fullFen = game.fen();
     var matchedOpening = ECO_DATA[fullFen] || ECO_DATA[fullFen.split(' ')[0]];
     $('#opening-name').text(matchedOpening && matchedOpening.name ? (matchedOpening.eco ? "["+matchedOpening.eco+"] " : "") + matchedOpening.name : (moves.length===0 ? "Starting Position" : ""));
-
     if (game.in_checkmate()) triggerGameOver('Checkmate');
     else if (game.in_draw()) triggerGameOver('Draw');
 }
@@ -289,7 +260,6 @@ function triggerGameOver(reason) {
         return;
     }
     $status.text('Game Over: ' + reason);
-
     if (reason === 'Checkmate') {
         var winnerText = (game.turn() === 'w') ? "CHECKMATE<br><span class='winner-text'>Black Wins</span>" : "CHECKMATE<br><span class='winner-text'>White Wins</span>";
         $('#checkmate-banner').html(winnerText).fadeIn(300);
@@ -312,7 +282,6 @@ async function runAnalysis() {
     var history = game.history();
     var tempGame = new Chess();
     var stats = { book:0, brilliant:0, great:0, best:0, excellent:0, good:0, inaccuracy:0, mistake:0, miss:0, blunder:0 };
-
     for (var i = 0; i < history.length; i++) {
         var isWhite = (i % 2 === 0);
         var moveStr = history[i];
