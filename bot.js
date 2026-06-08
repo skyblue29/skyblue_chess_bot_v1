@@ -47,7 +47,6 @@ window.selectColor = function(color) {
     }, 600);
 };
 
-// 🌟 Dev Mode 핸들러 (비밀번호 1234a)
 window.handleDevMode = function() {
     var pass = prompt("Enter Developer Password:");
     if (pass === "1234a") {
@@ -64,10 +63,8 @@ window.handleDevMode = function() {
     }
 };
 
-// 🌟 테스트 전용 FEN 설정 (Pawn on 7th rank)
 function startTestPosition() {
     playerColor = 'w';
-    // White King e2, White Pawn e7 / Black King a1
     var testFen = '8/4P3/8/8/8/8/4K3/k7 w - - 0 1';
     game.load(testFen);
     board.orientation('white');
@@ -105,10 +102,12 @@ function showPromotionMenu(source, target) {
     pendingPromotionMove = { from: source, to: target };
     var c = playerColor;
     var baseUrl = 'https://chessboardjs.com/img/chesspieces/wikipedia/';
+    
     $('#promo-img-q').attr('src', baseUrl + c + 'Q.png');
     $('#promo-img-r').attr('src', baseUrl + c + 'R.png');
     $('#promo-img-b').attr('src', baseUrl + c + 'B.png');
     $('#promo-img-n').attr('src', baseUrl + c + 'N.png');
+    
     $('#promotion-modal').fadeIn(200);
 }
 
@@ -150,8 +149,10 @@ function makeComputerMove() {
 
 engineWorker.onmessage = function(e) {
     var bestMove = e.data.bestMove;
-    game.move(bestMove);
-    board.position(game.fen());
+    if(bestMove) {
+        game.move(bestMove);
+        board.position(game.fen());
+    }
     updateStatus();
 };
 
