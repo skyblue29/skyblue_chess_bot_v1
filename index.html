@@ -4,157 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skyblue bot v1</title>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <link rel="stylesheet" href="style.css"> <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
-    <style>
-        body {
-            background-image: linear-gradient(rgba(15, 15, 20, 0.7), rgba(15, 15, 20, 0.85)), url('assets/images/wallpaper.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #222; color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; margin: 0; position: relative; overflow: hidden;
-        }
-        #start-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: rgba(10, 10, 15, 0.4);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.6s ease, visibility 0.6s;
-        }
-        .start-content {
-            text-align: center;
-            animation: fadeIn 1.2s ease-out forwards;
-        }
-        .start-title {
-            color: skyblue;
-            font-size: 52px;
-            font-weight: 800;
-            letter-spacing: 4px;
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px rgba(135, 206, 235, 0.4), 0 0 20px rgba(135, 206, 235, 0.2);
-        }
-        .design-by {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-            letter-spacing: 1.5px;
-            margin-bottom: 40px;
-        }
-        .btn-group {
-            display: flex; gap: 20px; justify-content: center;
-        }
-        .start-btn {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px 40px; font-size: 20px;
-            font-weight: bold; letter-spacing: 2px; cursor: pointer;
-            border-radius: 4px; transition: all 0.3s ease;
-            backdrop-filter: blur(2px);
-        }
-        .btn-white {
-            color: white; border: 2px solid rgba(255, 255, 255, 0.8);
-        }
-        .btn-white:hover {
-            background: white; color: #111;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6); transform: scale(1.05);
-        }
-        .btn-black {
-            color: #ccc; border: 2px solid rgba(170, 170, 170, 0.6); 
-        }
-        .btn-black:hover {
-            color: white; border-color: #fff; background: rgba(50, 50, 50, 0.8);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transform: scale(1.05);
-        }
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(20px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        #main-game-container {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.8s ease;
-        }
-        #top-bar {
-            width: 400px; background-color: rgba(35, 35, 35, 0.85); padding: 10px;
-            text-align: center; font-weight: bold; font-size: 14px;
-            border-radius: 5px 5px 0 0; box-sizing: border-box; border-bottom: 1px solid #444;
-            backdrop-filter: blur(4px);
-        }
-        #opening-name {
-            width: 400px; background-color: rgba(35, 35, 35, 0.85); color: #f0d9b5;
-            text-align: center; font-size: 13px; font-style: italic;
-            padding: 5px; box-sizing: border-box; border-bottom: 2px solid #444;
-            backdrop-filter: blur(4px);
-        }
-        #control-panel {
-            width: 400px; background-color: rgba(42, 42, 42, 0.85); padding: 8px; box-sizing: border-box;
-            display: flex; justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-        #resign-btn {
-            background-color: #d9534f; color: white; border: none; padding: 8px 20px;
-            font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;
-        }
-        #resign-btn:hover { background-color: #c9302c; }
-        #myBoard { width: 400px; position: relative; }
-        #status {
-            margin-top: 15px; font-size: 18px; color: skyblue; font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-        }
-        .suggested-dot {
-            width: 18px; height: 18px;
-            background: rgba(255, 255, 255, 0.35);
-            border-radius: 50%; position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 500;
-        }
-        .suggested-ring {
-            width: 42px; height: 42px;
-            border: 5px solid rgba(255, 255, 255, 0.35);
-            border-radius: 50%; position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 500; box-sizing: border-box;
-        }
-        .highlight-selected {
-            box-shadow: inset 0 0 0 4px skyblue !important;
-        }
-        #checkmate-banner {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(17, 17, 17, 0.85); border: 2px solid skyblue;
-            box-shadow: 0 0 20px rgba(135, 206, 235, 0.2), inset 0 0 15px rgba(135, 206, 235, 0.1);
-            padding: 30px 60px; border-radius: 12px;
-            font-size: 38px; font-weight: 900; color: #fff; text-align: center;
-            letter-spacing: 3px; line-height: 1.4; z-index: 2000; pointer-events: none;
-            backdrop-filter: blur(4px);
-        }
-        .winner-text {
-            color: skyblue; font-size: 26px; font-weight: bold; display: block; margin-top: 5px;
-            text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
-        }
-        #analysis-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-content {
-            background: #333; padding: 30px; border-radius: 10px; width: 350px;
-            text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .modal-content h2 { margin-top: 0; color: #f0d9b5; }
-        .stat-row {
-            display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; font-weight: bold;
-        }
-        .stat-row:last-child { border-bottom: none; }
-        .btn-restart {
-            margin-top: 20px; background-color: #5cb85c; color: white; border: none;
-            padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;
-        }
-        .btn-restart:hover { background-color: #4cae4c; }
-        #progress-bar { width: 100%; background: #222; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
-        #progress-fill { height: 10px; background: skyblue; width: 0%; transition: width 0.1s; }
-    </style>
 </head>
 <body>
 
@@ -176,8 +30,20 @@
             <button id="resign-btn" onclick="triggerGameOver('Resignation')">Resign</button>
         </div>
         
-        <div id="checkmate-banner"></div>
-        <div id="myBoard"></div>
+        <div id="myBoard">
+            <div id="checkmate-banner"></div>
+            
+            <div id="promotion-modal">
+                <div class="promo-title">PROMOTE PAWN</div>
+                <div class="promo-pieces">
+                    <div class="promo-piece" onclick="executePromotion('q')"><img id="promo-img-q" src=""></div>
+                    <div class="promo-piece" onclick="executePromotion('r')"><img id="promo-img-r" src=""></div>
+                    <div class="promo-piece" onclick="executePromotion('b')"><img id="promo-img-b" src=""></div>
+                    <div class="promo-piece" onclick="executePromotion('n')"><img id="promo-img-n" src=""></div>
+                </div>
+            </div>
+        </div>
+        
         <div id="status">skyblue bot v1</div>
     </div>
 
@@ -201,26 +67,6 @@
         </div>
     </div>
 
-    <script>
-        function selectColor(color) {
-            if (typeof isEngineReady === 'undefined' || !isEngineReady) {
-                alert("database loading.. please wait");
-                return;
-            }
-            var startScreen = document.getElementById('start-screen');
-            var mainGame = document.getElementById('main-game-container');
-            
-            startScreen.style.opacity = '0';
-            
-            setTimeout(function() {
-                startScreen.style.visibility = 'hidden';
-                mainGame.style.opacity = '1';
-                if (typeof startGameWithColor === "function") {
-                    startGameWithColor(color);
-                }
-            }, 600);
-        }
-    </script>
     <script src="bot.js"></script>
 
 </body>
