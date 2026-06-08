@@ -7,6 +7,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -34,19 +35,19 @@
         
         <div id="myBoard">
             <div id="checkmate-banner"></div>
-            
-            <div id="promotion-modal">
-                <div class="promo-title">PROMOTE PAWN</div>
-                <div class="promo-pieces">
-                    <div class="promo-piece" onclick="executePromotion('q')"><img id="promo-img-q" src=""></div>
-                    <div class="promo-piece" onclick="executePromotion('r')"><img id="promo-img-r" src=""></div>
-                    <div class="promo-piece" onclick="executePromotion('b')"><img id="promo-img-b" src=""></div>
-                    <div class="promo-piece" onclick="executePromotion('n')"><img id="promo-img-n" src=""></div>
-                </div>
-            </div>
         </div>
         
         <div id="status">skyblue bot v1</div>
+    </div>
+
+    <div id="promotion-modal">
+        <div class="promo-title">SELECT PIECE</div>
+        <div class="promo-pieces">
+            <div class="promo-piece" onclick="executePromotion('q')"><img id="promo-img-q" src=""></div>
+            <div class="promo-piece" onclick="executePromotion('r')"><img id="promo-img-r" src=""></div>
+            <div class="promo-piece" onclick="executePromotion('b')"><img id="promo-img-b" src=""></div>
+            <div class="promo-piece" onclick="executePromotion('n')"><img id="promo-img-n" src=""></div>
+        </div>
     </div>
 
     <div id="analysis-modal">
