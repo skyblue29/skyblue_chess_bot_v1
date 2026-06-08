@@ -39,9 +39,7 @@ body {
     margin-bottom: 40px;
 }
 
-.btn-group {
-    display: flex; gap: 20px; justify-content: center;
-}
+.btn-group { display: flex; gap: 20px; justify-content: center; }
 
 .start-btn {
     background: rgba(0, 0, 0, 0.3);
@@ -57,15 +55,17 @@ body {
 .btn-black { color: #ccc; border: 2px solid rgba(170, 170, 170, 0.6); }
 .btn-black:hover { color: white; border-color: #fff; background: rgba(50, 50, 50, 0.8); box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transform: scale(1.05); }
 
+/* 🌟 DEV TOOLS 완벽 고정 */
 .dev-tools-btn {
-    position: absolute; bottom: 30px; left: 30px;
-    background: transparent; color: rgba(135, 206, 235, 0.4);
-    border: 1px solid rgba(135, 206, 235, 0.2);
-    padding: 8px 15px; font-size: 12px; cursor: pointer;
+    position: fixed; bottom: 20px; left: 20px;
+    background: rgba(0, 0, 0, 0.5); color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px; font-size: 12px; cursor: pointer;
     border-radius: 4px; letter-spacing: 1px; transition: all 0.3s ease;
+    z-index: 10000;
 }
 .dev-tools-btn:hover {
-    color: skyblue; border-color: skyblue;
+    color: skyblue; border-color: skyblue; background: rgba(135, 206, 235, 0.1);
     box-shadow: 0 0 10px rgba(135, 206, 235, 0.3);
 }
 
@@ -137,29 +137,39 @@ body {
 
 .winner-text { color: skyblue; font-size: 26px; font-weight: bold; display: block; margin-top: 5px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); }
 
+/* 🌟 프로모션 모달 완벽 수정 */
 #promotion-modal {
-    display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(17, 17, 17, 0.85); border: 2px solid skyblue;
-    box-shadow: 0 0 20px rgba(135, 206, 235, 0.2), inset 0 0 15px rgba(135, 206, 235, 0.1);
-    padding: 25px; border-radius: 12px; z-index: 3000;
-    backdrop-filter: blur(4px); text-align: center;
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(20, 20, 25, 0.9); border: 2px solid skyblue;
+    box-shadow: 0 0 30px rgba(135, 206, 235, 0.4), inset 0 0 20px rgba(135, 206, 235, 0.1);
+    padding: 30px; border-radius: 16px; z-index: 9999; /* z-index를 최상단으로 */
+    backdrop-filter: blur(10px); text-align: center;
 }
 
-.promo-title { color: skyblue; font-size: 20px; font-weight: bold; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); }
+.promo-title {
+    color: skyblue; font-size: 22px; font-weight: 800; margin-bottom: 25px;
+    letter-spacing: 3px; text-shadow: 0 0 10px rgba(135, 206, 235, 0.6);
+}
 
-.promo-pieces { display: flex; gap: 15px; justify-content: center; }
+.promo-pieces { display: flex; gap: 20px; justify-content: center; }
 
 .promo-piece {
-    width: 70px; height: 70px; cursor: pointer; border-radius: 8px; transition: all 0.3s ease;
+    width: 80px; height: 80px; cursor: pointer; border-radius: 12px; transition: all 0.3s ease;
     background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex; align-items: center; justify-content: center;
 }
-.promo-piece:hover { background: rgba(135, 206, 235, 0.2); border-color: skyblue; box-shadow: 0 0 15px rgba(135, 206, 235, 0.6); transform: scale(1.1); }
-.promo-piece img { width: 80%; height: 80%; }
+.promo-piece:hover {
+    background: rgba(135, 206, 235, 0.2); border-color: skyblue;
+    box-shadow: 0 0 20px rgba(135, 206, 235, 0.8); transform: translateY(-5px) scale(1.05);
+}
+.promo-piece img {
+    width: 85%; height: 85%; object-fit: contain;
+    pointer-events: none; /* 중요: 클릭 이벤트가 이미지에 막히지 않게 함 */
+}
 
 #analysis-modal {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
+    background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 10000;
 }
 
 .modal-content { background: #333; padding: 30px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
