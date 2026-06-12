@@ -8,8 +8,6 @@ var ecoFiles = ['ecoA.json', 'ecoB.json', 'ecoC.json', 'ecoD.json', 'ecoE.json',
 var loadedCount = 0;
 var isEngineReady = false;
 var playerColor = 'w';
-
-// 🌟 클릭 이동을 위한 상태 변수
 var selectedSquare = null;
 var pendingPromotionMove = null;
 
@@ -80,27 +78,18 @@ function startTestPosition() {
     updateStatus();
 }
 
-// 🌟 회색 동그라미(가이드) 지우기
 function removeGreyDots() {
     $('#myBoard .suggested-dot, #myBoard .suggested-ring').remove();
     $('#myBoard div[class*="square-"]').removeClass('highlight-selected');
 }
 
-// 🌟 회색 동그라미(가이드) 그리기
 function showGreyDots(square) {
     removeGreyDots();
-    
-    // 현재 선택한 기물 하이라이트
     $('#myBoard .square-' + square).addClass('highlight-selected');
-    
-    // 이동 가능한 칸 리스트 가져오기
     var moves = game.moves({ square: square, verbose: true });
-    
     for (var i = 0; i < moves.length; i++) {
         var targetSquare = moves[i].to;
         var $targetEl = $('#myBoard .square-' + targetSquare);
-        
-        // 상대 기물이 있는 곳이면 '링(Ring)', 빈 칸이면 '동그라미(Dot)' 표시
         if (game.get(targetSquare)) {
             $targetEl.append('<div class="suggested-ring"></div>');
         } else {
@@ -179,28 +168,17 @@ function getEliteOpeningMove() {
         if (ECO_DATA[nextFenFull] || ECO_DATA[nextFenPos]) bookMoves.push(tempMove);
     }
     if (bookMoves.length > 0) return bookMoves[Math.floor(Math.random() * bookMoves.length)];
-    
     return null; 
 }
 
 function makeComputerMove() {
     $status.text('computer is thinking...');
-    
-    var openingMove = getEliteOpeningMove();
-    if (openingMove) {
-        setTimeout(function() {
-            game.move(openingMove);
-            board.position(game.fen());
-            updateStatus();
-        }, 300);
-    } else {
-        engineWorker.postMessage({
-            fen: game.fen(),
-            isWhite: (game.turn() === 'w'),
-            moveHistoryLength: game.history().length,
-            legalMoves: game.moves()
-        });
-    }
+    engineWorker.postMessage({
+        fen: game.fen(),
+        isWhite: (game.turn() === 'w'),
+        moveHistoryLength: game.history().length,
+        legalMoves: game.moves()
+    });
 }
 
 engineWorker.onmessage = function(e) {
@@ -216,8 +194,6 @@ function onDragStart(source, piece) {
     if (game.game_over()) return false;
     if (piece.charAt(0) !== playerColor) return false;
     if (!isEngineReady) return false;
-    
-    // 드래그 시작 시 선택된 기물 표시
     selectedSquare = source;
     showGreyDots(source);
 }
@@ -249,28 +225,21 @@ function onDrop(source, target) {
 
 function onSnapEnd() { board.position(game.fen()); }
 
-// 🌟 클릭 무브(Click-to-Move) 완전 재구축
-$(document).on('click', '#myBoard .square-55d63', function(event) {
-    // 1. 게임 종료 상태이거나 데이터 로딩 중이면 무시
+// 🌟 클릭 이동 완벽 픽스 (mousedown & touchstart 이벤트 선점)
+$(document).on('mousedown touchstart', '#myBoard .square-55d63', function(event) {
     if (!isEngineReady || game.game_over()) return;
-    
-    // 2. 봇 턴에는 클릭 무시
     if (game.turn() !== playerColor) return; 
 
-    // 3. 클릭한 칸의 좌표(예: e4, d5) 추출
     var className = $(this).attr('class');
     var match = className.match(/square-([a-h][1-8])/);
     if (!match) return;
     
     var clickedSquare = match[1];
     var pieceOnClickedSquare = game.get(clickedSquare);
-    
-    // 4. 이미 기물이 선택되어 있는 상태(동그라미가 떠 있는 상태)에서 클릭한 경우
+
     if (selectedSquare) {
-        // 선택한 칸이 이동 가능한 곳인지 확인
         var moves = game.moves({ square: selectedSquare, verbose: true });
         var moveObj = null;
-        
         for (var i = 0; i < moves.length; i++) {
             if (moves[i].to === clickedSquare) {
                 moveObj = moves[i];
@@ -278,44 +247,45 @@ $(document).on('click', '#myBoard .square-55d63', function(event) {
             }
         }
         
-        // 이동 가능한 곳이면 이동 실행
+        // 이동 가능한 칸(빈 칸 또는 상대 기물)을 정상적으로 클릭한 경우
         if (moveObj) {
-            // 프로모션인지 확인
             if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
                 showPromotionMenu(selectedSquare, clickedSquare);
+                event.preventDefault(); // 기본 드래그 억제
                 return;
             }
             
-            // 일반 이동
             game.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
-            board.position(game.fen()); // 체스판 갱신
+            board.position(game.fen());
             removeGreyDots();
             selectedSquare = null;
             updateStatus();
             
             if (!game.game_over()) makeComputerMove();
+            event.preventDefault(); // 기물을 먹을 때 클릭이 무시되는 현상 방지
             return;
         }
         
-        // 이동할 수 없는 빈 칸을 눌렀거나, 아예 다른 곳을 눌렀다면 선택 취소
-        if (!pieceOnClickedSquare || pieceOnClickedSquare.color !== playerColor) {
+        // 이동 불가능한 칸 클릭 처리
+        if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
+            if (selectedSquare === clickedSquare) {
+                removeGreyDots();
+                selectedSquare = null;
+            } else {
+                selectedSquare = clickedSquare;
+                showGreyDots(clickedSquare);
+            }
+        } else {
             removeGreyDots();
             selectedSquare = null;
-            return;
         }
+        return;
     }
     
-    // 5. 아무것도 선택되지 않은 상태에서 내 기물을 클릭한 경우
+    // 처음 내 기물을 클릭했을 때
     if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
-        // 이미 선택된 기물을 또 누르면 취소
-        if (selectedSquare === clickedSquare) {
-            removeGreyDots();
-            selectedSquare = null;
-        } else {
-            // 새 기물을 선택하면 가이드 동그라미 띄우기
-            selectedSquare = clickedSquare;
-            showGreyDots(clickedSquare);
-        }
+        selectedSquare = clickedSquare;
+        showGreyDots(clickedSquare);
     }
 });
 
