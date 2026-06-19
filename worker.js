@@ -155,6 +155,17 @@ function orderMoves(moves) {
     return moves.sort(function(a, b) { return scoreMove(b) - scoreMove(a); });
 }
 
+// 🌟 배열을 무작위로 섞는 함수 (Fisher-Yates)
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
+}
+
 // 🌟 제한 깊이(qDepth)를 추가하여 무한 꼬리물기 차단
 function quiesce(alpha, beta, isMaximizingPlayer, qDepth) {
     nodes++;
@@ -241,17 +252,27 @@ onmessage = function(e) {
         return;
     }
 
+    // 🌟 동점 후보들의 등장 순서 편향을 줄이기 위해 탐색 전 순서를 한번 섞어줌
+    moves = shuffleArray(moves);
     moves = orderMoves(moves);
     var globalBestMove = moves[0]; // 기본값 (타임아웃 시 대비)
-    
+
     startTime = Date.now();
     timeLimit = 2000; // 🌟 봇 최대 사고 시간: 2초
     timeOut = false;
     nodes = 0;
 
+    // 🌟 오프닝일수록 허용 오차(centipawn)를 크게 줘서 다양한 수를 섞어 쓰게 하고,
+    //    수가 진행될수록(중후반) 오차를 줄여 기력을 유지함.
+    var moveNumber = game.history().length;
+    var tolerance;
+    if (moveNumber < 6) tolerance = 35;       // 1~3수 정도: 오프닝, 다양성 최우선
+    else if (moveNumber < 16) tolerance = 15; // 그 다음: 약간의 다양성
+    else tolerance = 0;                       // 중후반: 항상 최선수만 (기력 유지)
+
     // 🌟 반복 심화(Iterative Deepening): 깊이 1부터 4까지 순차적으로 탐색
     for (var currentDepth = 1; currentDepth <= 4; currentDepth++) {
-        var bestMoveThisDepth = null;
+        var moveValues = []; // 이번 깊이에서 평가한 {move, value} 모음
         var bestValue = e.data.isWhite ? -Infinity : Infinity;
 
         for (var i = 0; i < moves.length; i++) {
@@ -262,22 +283,24 @@ onmessage = function(e) {
 
             if (timeOut) break; // 2초 초과 시 현재 루프 폐기
 
+            moveValues.push({ move: move, value: boardValue });
+
             if (e.data.isWhite) {
-                if (boardValue > bestValue) {
-                    bestValue = boardValue;
-                    bestMoveThisDepth = move;
-                }
+                if (boardValue > bestValue) bestValue = boardValue;
             } else {
-                if (boardValue < bestValue) {
-                    bestValue = boardValue;
-                    bestMoveThisDepth = move;
-                }
+                if (boardValue < bestValue) bestValue = boardValue;
             }
         }
-        
-        // 2초가 넘지 않고 깊이 탐색을 완료했다면 가장 좋은 수를 업데이트
-        if (!timeOut && bestMoveThisDepth) {
-            globalBestMove = bestMoveThisDepth;
+
+        if (!timeOut && moveValues.length > 0) {
+            // 🌟 최선수와 점수 차이가 tolerance 이내인 후보들을 모두 모은 뒤 무작위 선택
+            var candidates = moveValues.filter(function(mv) {
+                return e.data.isWhite
+                    ? (bestValue - mv.value <= tolerance)
+                    : (mv.value - bestValue <= tolerance);
+            });
+            var pick = candidates[Math.floor(Math.random() * candidates.length)];
+            globalBestMove = pick.move;
         } else if (timeOut) {
             break; // 시간이 초과되었으면 즉시 탈출
         }
