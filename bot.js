@@ -34,7 +34,7 @@ loadEcoFiles();
 
 window.selectColor = function(color) {
     if (!isEngineReady) {
-        alert("database loading.. please wait");
+        alert("Database is loading. Please wait.");
         return;
     }
     var startScreen = document.getElementById('start-screen');
@@ -65,6 +65,7 @@ window.handleDevMode = function() {
 
 function startTestPosition() {
     playerColor = 'w';
+    // 흑에게 h7 폰을 주어 기물 부족 무승부를 방지한 프로모션 테스트 FEN
     var testFen = 'k7/4P2p/8/8/8/8/8/4K3 w - - 0 1';
     game.load(testFen);
     board.orientation('white');
@@ -172,13 +173,23 @@ function getEliteOpeningMove() {
 }
 
 function makeComputerMove() {
-    $status.text('computer is thinking...');
-    engineWorker.postMessage({
-        fen: game.fen(),
-        isWhite: (game.turn() === 'w'),
-        moveHistoryLength: game.history().length,
-        legalMoves: game.moves()
-    });
+    $status.text('Computer is thinking...');
+    
+    // 1. 오프닝 북 탐색
+    var openingMove = getEliteOpeningMove();
+    if (openingMove) {
+        setTimeout(function() {
+            game.move(openingMove);
+            board.position(game.fen());
+            updateStatus();
+        }, 300);
+    } else {
+        // 2. 워커(엔진) 호출
+        engineWorker.postMessage({
+            fen: game.fen(),
+            isWhite: (game.turn() === 'w')
+        });
+    }
 }
 
 engineWorker.onmessage = function(e) {
@@ -212,10 +223,13 @@ function onDrop(source, target) {
         selectedSquare = null;
         return 'snapback';
     }
+    
+    // 프로모션 처리
     if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
         showPromotionMenu(source, target);
         return 'snapback';
     }
+    
     game.move({ from: source, to: target, promotion: 'q' });
     updateStatus();
     removeGreyDots();
@@ -225,7 +239,7 @@ function onDrop(source, target) {
 
 function onSnapEnd() { board.position(game.fen()); }
 
-// 🌟 클릭 이동 완벽 픽스 (mousedown & touchstart 이벤트 선점)
+// 클릭 이동 처리
 $(document).on('mousedown touchstart', '#myBoard .square-55d63', function(event) {
     if (!isEngineReady || game.game_over()) return;
     if (game.turn() !== playerColor) return; 
@@ -247,11 +261,10 @@ $(document).on('mousedown touchstart', '#myBoard .square-55d63', function(event)
             }
         }
         
-        // 이동 가능한 칸(빈 칸 또는 상대 기물)을 정상적으로 클릭한 경우
         if (moveObj) {
             if (moveObj.flags.indexOf('p') !== -1 || moveObj.flags.indexOf('np') !== -1 || moveObj.flags.indexOf('cp') !== -1 || moveObj.promotion) {
                 showPromotionMenu(selectedSquare, clickedSquare);
-                event.preventDefault(); // 기본 드래그 억제
+                event.preventDefault();
                 return;
             }
             
@@ -262,11 +275,10 @@ $(document).on('mousedown touchstart', '#myBoard .square-55d63', function(event)
             updateStatus();
             
             if (!game.game_over()) makeComputerMove();
-            event.preventDefault(); // 기물을 먹을 때 클릭이 무시되는 현상 방지
+            event.preventDefault();
             return;
         }
         
-        // 이동 불가능한 칸 클릭 처리
         if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
             if (selectedSquare === clickedSquare) {
                 removeGreyDots();
@@ -282,7 +294,6 @@ $(document).on('mousedown touchstart', '#myBoard .square-55d63', function(event)
         return;
     }
     
-    // 처음 내 기물을 클릭했을 때
     if (pieceOnClickedSquare && pieceOnClickedSquare.color === playerColor) {
         selectedSquare = clickedSquare;
         showGreyDots(clickedSquare);
