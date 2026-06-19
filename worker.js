@@ -4,7 +4,7 @@ var game = new Chess();
 
 var pieceValues = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
-// --- 위치 평가 데이터 ---
+// 🌟 미들게임 포지션 평가 (Piece-Square Tables)
 var pawnEvalWhite = [
     [0,  0,  0,  0,  0,  0,  0,  0],
     [50, 50, 50, 50, 50, 50, 50, 50],
@@ -95,27 +95,31 @@ var rookEvalBlack = reverseArray(rookEvalWhite);
 var kingEvalMidBlack = reverseArray(kingEvalMidWhite);
 var kingEvalEndBlack = reverseArray(kingEvalEndWhite);
 
-// --- 글로벌 타이머 변수 ---
 var startTime = 0;
-var timeLimit = 2000; // 🌟 2000ms (2초) 제한
+var timeLimit = 3000; // 🌟 엔진 연산 타임아웃 3초 (성능 극대화)
 var timeOut = false;
 var nodes = 0;
 
 function evaluateBoard() {
     var totalEvaluation = 0;
     var nonPawnMaterial = 0;
+
+    var boardState = game.board();
     for (var i = 0; i < 8; i++) {
         for (var j = 0; j < 8; j++) {
-            var piece = game.board()[i][j];
+            var piece = boardState[i][j];
             if (piece !== null && piece.type !== 'p' && piece.type !== 'k') {
                 nonPawnMaterial += pieceValues[piece.type];
             }
         }
     }
+
+    // 판에 남은 주요 기물 점수가 1500점 미만이면 엔드게임 모드 돌입
     var isEndgame = nonPawnMaterial < 1500;
+
     for (var i = 0; i < 8; i++) {
         for (var j = 0; j < 8; j++) {
-            totalEvaluation += getPieceValue(game.board()[i][j], i, j, isEndgame);
+            totalEvaluation += getPieceValue(boardState[i][j], i, j, isEndgame);
         }
     }
     return totalEvaluation;
@@ -125,6 +129,7 @@ function getPieceValue(piece, x, y, isEndgame) {
     if (piece === null) return 0;
     var val = pieceValues[piece.type];
     var pst = 0;
+
     if (piece.color === 'w') {
         if (piece.type === 'p') pst = isEndgame ? pawnEvalEndgameWhite[x][y] : pawnEvalWhite[x][y];
         else if (piece.type === 'n') pst = knightEval[x][y];
@@ -144,29 +149,25 @@ function getPieceValue(piece, x, y, isEndgame) {
     }
 }
 
+// 🌟 MVV-LVA (가장 싼 기물로 상대의 비싼 기물을 잡는 수를 먼저 계산)
 function scoreMove(move) {
     var score = 0;
-    if (move.captured) score += 10 * pieceValues[move.captured] - pieceValues[move.piece];
-    if (move.promotion) score += pieceValues[move.promotion];
+    if (move.captured) {
+        score += 10 * pieceValues[move.captured] - pieceValues[move.piece];
+    }
+    if (move.promotion) {
+        score += pieceValues[move.promotion];
+    }
     return score;
 }
 
 function orderMoves(moves) {
-    return moves.sort(function(a, b) { return scoreMove(b) - scoreMove(a); });
+    return moves.sort(function(a, b) {
+        return scoreMove(b) - scoreMove(a);
+    });
 }
 
-// 🌟 배열을 무작위로 섞는 함수 (Fisher-Yates)
-function shuffleArray(array) {
-    for (var i = array.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
-    return array;
-}
-
-// 🌟 제한 깊이(qDepth)를 추가하여 무한 꼬리물기 차단
+// 🌟 정지 탐색 (전술적 교전이 멈출 때까지 시뮬레이션 연장)
 function quiesce(alpha, beta, isMaximizingPlayer, qDepth) {
     nodes++;
     if ((nodes & 2047) === 0 && Date.now() - startTime > timeLimit) timeOut = true;
@@ -202,17 +203,20 @@ function quiesce(alpha, beta, isMaximizingPlayer, qDepth) {
     return isMaximizingPlayer ? alpha : beta;
 }
 
+// 🌟 알파-베타 푸르닝 (무의미한 수는 계산 생략)
 function minimax(depth, alpha, beta, isMaximizingPlayer) {
     nodes++;
     if ((nodes & 2047) === 0 && Date.now() - startTime > timeLimit) timeOut = true;
     if (timeOut) return 0;
 
-    if (depth === 0) return quiesce(alpha, beta, isMaximizingPlayer, 0);
+    if (depth === 0) {
+        return quiesce(alpha, beta, isMaximizingPlayer, 0);
+    }
     
     var moves = game.moves({ verbose: true });
     if (moves.length === 0) {
         if (game.in_checkmate()) return isMaximizingPlayer ? -99999 : 99999;
-        return 0; 
+        return 0; // 스테일메이트 등 무승부
     }
     
     moves = orderMoves(moves);
@@ -224,9 +228,10 @@ function minimax(depth, alpha, beta, isMaximizingPlayer) {
             var value = minimax(depth - 1, alpha, beta, false);
             game.undo();
             if (timeOut) return 0;
+
             bestVal = Math.max(bestVal, value);
             alpha = Math.max(alpha, bestVal);
-            if (beta <= alpha) break;
+            if (beta <= alpha) break; // 가지치기
         }
         return bestVal;
     } else {
@@ -236,9 +241,10 @@ function minimax(depth, alpha, beta, isMaximizingPlayer) {
             var value = minimax(depth - 1, alpha, beta, true);
             game.undo();
             if (timeOut) return 0;
+
             bestVal = Math.min(bestVal, value);
             beta = Math.min(beta, bestVal);
-            if (beta <= alpha) break;
+            if (beta <= alpha) break; // 가지치기
         }
         return bestVal;
     }
@@ -252,27 +258,17 @@ onmessage = function(e) {
         return;
     }
 
-    // 🌟 동점 후보들의 등장 순서 편향을 줄이기 위해 탐색 전 순서를 한번 섞어줌
-    moves = shuffleArray(moves);
     moves = orderMoves(moves);
-    var globalBestMove = moves[0]; // 기본값 (타임아웃 시 대비)
-
+    var globalBestMove = moves[0];
+    
     startTime = Date.now();
-    timeLimit = 2000; // 🌟 봇 최대 사고 시간: 2초
+    timeLimit = 3000; // 3초 제한
     timeOut = false;
     nodes = 0;
 
-    // 🌟 오프닝일수록 허용 오차(centipawn)를 크게 줘서 다양한 수를 섞어 쓰게 하고,
-    //    수가 진행될수록(중후반) 오차를 줄여 기력을 유지함.
-    var moveNumber = game.history().length;
-    var tolerance;
-    if (moveNumber < 6) tolerance = 35;       // 1~3수 정도: 오프닝, 다양성 최우선
-    else if (moveNumber < 16) tolerance = 15; // 그 다음: 약간의 다양성
-    else tolerance = 0;                       // 중후반: 항상 최선수만 (기력 유지)
-
-    // 🌟 반복 심화(Iterative Deepening): 깊이 1부터 4까지 순차적으로 탐색
-    for (var currentDepth = 1; currentDepth <= 4; currentDepth++) {
-        var moveValues = []; // 이번 깊이에서 평가한 {move, value} 모음
+    // 🌟 반복 심화 탐색 (1수 앞부터 5수 앞까지 순차적으로 찔러봄)
+    for (var currentDepth = 1; currentDepth <= 5; currentDepth++) {
+        var bestMoveThisDepth = null;
         var bestValue = e.data.isWhite ? -Infinity : Infinity;
 
         for (var i = 0; i < moves.length; i++) {
@@ -281,28 +277,26 @@ onmessage = function(e) {
             var boardValue = minimax(currentDepth - 1, -Infinity, Infinity, !e.data.isWhite);
             game.undo();
 
-            if (timeOut) break; // 2초 초과 시 현재 루프 폐기
-
-            moveValues.push({ move: move, value: boardValue });
+            if (timeOut) break;
 
             if (e.data.isWhite) {
-                if (boardValue > bestValue) bestValue = boardValue;
+                if (boardValue > bestValue) {
+                    bestValue = boardValue;
+                    bestMoveThisDepth = move;
+                }
             } else {
-                if (boardValue < bestValue) bestValue = boardValue;
+                if (boardValue < bestValue) {
+                    bestValue = boardValue;
+                    bestMoveThisDepth = move;
+                }
             }
         }
-
-        if (!timeOut && moveValues.length > 0) {
-            // 🌟 최선수와 점수 차이가 tolerance 이내인 후보들을 모두 모은 뒤 무작위 선택
-            var candidates = moveValues.filter(function(mv) {
-                return e.data.isWhite
-                    ? (bestValue - mv.value <= tolerance)
-                    : (mv.value - bestValue <= tolerance);
-            });
-            var pick = candidates[Math.floor(Math.random() * candidates.length)];
-            globalBestMove = pick.move;
+        
+        // 시간 초과 안 당하고 탐색 완료한 깊이의 최고의 수를 저장
+        if (!timeOut && bestMoveThisDepth) {
+            globalBestMove = bestMoveThisDepth;
         } else if (timeOut) {
-            break; // 시간이 초과되었으면 즉시 탈출
+            break;
         }
     }
 
